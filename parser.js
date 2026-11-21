@@ -75,42 +75,83 @@ export function scaleLine(line, factor) {
 }
 
 /* ---------- Timers ---------- */
+// Catches every way a recipe writes a time: "10 minutes", "10-minute", "10–12 min", "1½ hours", "1 1/2 hrs",
+// "an hour and a half", "two minutes", "thirty-five minutes", "30 sec", "10m", "1h30m",
+// and Turkish "10 dakika", "10 dakikada", "bir buçuk saat", "yarım saat", "on beş dakika".
 
-const T_UNIT = 'hours?|hrs?|hr|h|minutes?|mins?|min|m|seconds?|secs?|sec|saat|dakika|dakka|dk|saniye|sn';
+const EN_ONES = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9 };
+const EN_WORDS = { ...EN_ONES, a: 1, an: 1, ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16,
+  seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, ninety: 90 };
+const TR_ONES = { bir: 1, iki: 2, 'üç': 3, 'dört': 4, 'beş': 5, 'altı': 6, yedi: 7, sekiz: 8, dokuz: 9 };
+const TR_WORDS = { ...TR_ONES, on: 10, yirmi: 20, otuz: 30, 'kırk': 40, elli: 50, 'altmış': 60, 'doksan': 90 };
+const alt = o => Object.keys(o).sort((a, b) => b.length - a.length).join('|');
+
+const WORD_NUM = `(?:(?:twenty|thirty|forty|fifty)[- ](?:${alt(EN_ONES)})|(?:on|yirmi|otuz|kırk|elli)\\s(?:${alt(TR_ONES)})|${alt(EN_WORDS)}|${alt(TR_WORDS)}|a couple of|couple of|a few|few|half an?|half|yarım|çeyrek)`;
+const DIGIT_NUM = `(?:\\d+\\s+\\d+\\s*\\/\\s*\\d+|\\d+\\s*\\/\\s*\\d+|\\d+(?:[.,]\\d+)?(?:\\s?[½¼¾⅓⅔])?|[½¼¾⅓⅔])`;
+const T_NUM = `(?:${DIGIT_NUM}|${WORD_NUM})(?:\\s+buçuk)?`;
+const T_UNIT = 'hours?|hrs?|hr|h|minutes?|mins?|min|m|seconds?|secs?|sec|s|saat\\p{L}*|dakika\\p{L}*|dakka\\p{L}*|dk|saniye\\p{L}*|sn';
 const TIME_RE = new RegExp(
-  `(?:(\\d+(?:[.,]\\d+)?|[½¼¾])(?:\\s*(?:-|–|—|to|ila|ile|or|veya)\\s*(\\d+(?:[.,]\\d+)?))?\\s*(${T_UNIT})\\.?` +
-  `|(half an hour|an hour|one hour|yarım saat|bir saat|çeyrek saat|quarter of an hour))(?![a-zA-ZçğıöşüÇĞİÖŞÜ])`, 'gi');
+  `(?:(${T_NUM})(?:\\s*(?:-|–|—|to|or|ila|ile|veya|ya da)\\s*(${T_NUM}))?(\\s*[-‑–]\\s*|\\s*)(${T_UNIT})\\.?` +
+  `|(half an hour|quarter of an hour|quarter hour))(?![\\p{L}]|\\d(?!\\d*\\s?m))`, 'giu');   // a digit may follow only in "1h30m"
 
 function unitSeconds(u) {
   u = u.toLowerCase();
-  if (/^(h|hr|hrs|hour|hours|saat)$/.test(u)) return 3600;
-  if (/^(s|sec|secs|second|seconds|saniye|sn)$/.test(u)) return 1;
+  if (/^(h|hr|hrs|hour|hours)$/.test(u) || u.startsWith('saat')) return 3600;
+  if (/^(s|sec|secs|second|seconds|sn)$/.test(u) || u.startsWith('saniye')) return 1;
   return 60;
 }
 
-/** Returns [{ index, length, seconds, text }] for every cooking time in a step. */
+function timeNum(s) {
+  s = s.toLowerCase().trim();
+  let extra = 0;
+  if (/\s+buçuk$/.test(s)) { extra = 0.5; s = s.replace(/\s+buçuk$/, ''); }
+  let n;
+  if (/^half/.test(s) || s === 'yarım') n = 0.5;
+  else if (s === 'çeyrek') n = 0.25;
+  else if (/couple/.test(s)) n = 2;
+  else if (/few/.test(s)) n = 3;
+  else if (/^\d|^[½¼¾⅓⅔]/.test(s)) n = parseNum(s);
+  else {
+    const parts = s.split(/[- ]/);
+    n = parts.reduce((t, w) => t + (EN_WORDS[w] ?? TR_WORDS[w] ?? NaN), 0);
+  }
+  return n + extra;
+}
+
+/** Returns [{ index, length, seconds, text }] for every cooking time in a piece of text. */
 export function findTimers(text) {
   const out = [];
   TIME_RE.lastIndex = 0;
   let m;
   while ((m = TIME_RE.exec(text))) {
-    // need a word boundary before the number
-    if (m.index > 0 && /[a-zA-Z0-9]/.test(text[m.index - 1])) continue;
-    let seconds;
-    if (m[4]) {
-      const p = m[4].toLowerCase();
-      seconds = p.startsWith('half') || p.startsWith('yarım') ? 1800 : p.startsWith('çeyrek') || p.startsWith('quarter') ? 900 : 3600;
+    // must start on a word boundary ("pizza minute" is not "a minute")
+    const prev = out[out.length - 1];
+    const joined = prev && prev.index + prev.length === m.index;          // "30m" right after "1h"
+    if (m.index > 0 && !joined && /[\p{L}\p{N}]/u.test(text[m.index - 1])) { TIME_RE.lastIndex = m.index + 1; continue; }
+    let seconds, length = m[0].length;
+    if (m[5]) {
+      seconds = /^half/i.test(m[5]) ? 1800 : 900;
     } else {
-      const unit = m[3];
-      // bare "m"/"h" only count when glued to the number ("10m", "1h")
-      if (/^[mh]$/i.test(unit) && /\s/.test(m[0].replace(/\.$/, '').slice(-2, -1))) continue;
-      const n = m[1] in UNI_FRAC ? UNI_FRAC[m[1]] : parseFloat(m[1].replace(',', '.'));
+      const unit = m[4], glue = m[3];
+      const isWord = !/^[\d½¼¾⅓⅔]/.test(m[1]);
+      // single-letter units only when glued to a digit: "10m", "1h", "30s"
+      if (/^[mhs]$/i.test(unit) && (glue.length || isWord)) continue;
+      // "a second egg", "a minute amount" are not times
+      if (/^(a|an|one|few|a few)$/i.test(m[1].trim()) && /^(s|sec|secs|second|seconds)$/i.test(unit)) continue;
+      // a full stop after a whole word ("two minutes.") ends the sentence; keep it only for "min." / "hr."
+      if (m[0].endsWith('.') && !/^(?:mins?|hrs?|secs?|dk|sn)$/i.test(unit)) length -= 1;
+      const n = timeNum(m[1]);
+      if (!isFinite(n) || n <= 0) continue;
       seconds = Math.round(n * unitSeconds(unit));
+      // "an hour and a half", "2 minutes and a half"
+      const tail = text.slice(m.index + length).match(/^\s+and a half(?![\p{L}])/iu);
+      if (tail) { seconds += Math.round(unitSeconds(unit) / 2); length += tail[0].length; }
     }
     if (!seconds || seconds > 48 * 3600) continue;
-    out.push({ index: m.index, length: m[0].length, seconds, text: m[0] });
+    out.push({ index: m.index, length, seconds, text: text.slice(m.index, m.index + length) });
+    TIME_RE.lastIndex = m.index + length;
   }
-  // merge "1 hour 30 minutes" / "1 saat 15 dakika" into one timer
+  // merge "1 hour 30 minutes", "1h30m", "1 saat 15 dakika" into one timer
   for (let i = out.length - 2; i >= 0; i--) {
     const a = out[i], b = out[i + 1];
     const between = text.slice(a.index + a.length, b.index);

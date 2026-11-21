@@ -147,7 +147,7 @@ function ingredientsHTML(r, actAttr = 'data-act="check-ing"') {
     const { amount, rest } = splitIngredient(line, f);
     return `<li class="ing ${done.has(i) ? 'done' : ''}" ${actAttr} data-i="${i}">
       <span class="tick" aria-hidden="true"></span>
-      <span class="ing-t">${amount != null ? `<b class="amt ${f !== 1 ? 'scaled' : ''}">${esc(amount)}</b>` : ''}${esc(rest)}</span>
+      <span class="ing-t">${amount != null ? `<b class="amt ${f !== 1 ? 'scaled' : ''}">${esc(amount)}</b>` : ''}${withTimers(rest, 'Ingredients', r.title)}</span>
     </li>`;
   }).join('');
 }
@@ -280,7 +280,7 @@ const VIEWS = {
       <h1 class="r-title">${esc(r.title || 'Untitled')}</h1>
       ${times.length || r.servings ? `<div class="r-times">
         ${r.servings ? `<div><span>Serves</span><b>${r.servings}</b></div>` : ''}
-        ${times.map(([k, v]) => `<div><span>${k}</span><b>${esc(v)}</b></div>`).join('')}
+        ${times.map(([k, v]) => `<div><span>${k}</span><b>${withTimers(v, k, r.title)}</b></div>`).join('')}
       </div>` : ''}
       <div class="r-flags">
         <button class="flag ${r.favorite ? 'on' : ''}" data-act="toggle-fav">${ICON.star} Favorite</button>
@@ -1018,6 +1018,7 @@ function openCook(r) {
   const goStep = d => { const j = i + d; if (j < 0) return; if (j >= n) { close(true); return; } i = j; draw(); };
 
   el.addEventListener('click', e => {
+    if (e.target.closest('.tchip')) return;          // timer chips are handled globally
     const b = e.target.closest('[data-c]');
     if (!b) return;
     const a = b.dataset.c;
