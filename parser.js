@@ -158,13 +158,18 @@ const META = [
 ];
 
 const EMOJI_LEAD = /^(?:\p{Extended_Pictographic}|\p{Emoji_Modifier}|️|‍|⃣)+\s*/u;
-const BULLET_LEAD = /^(?:[•·●○◦▪▫■□▢☐☑✓✔➤►▶→*+~]+|-(?=\s)|–(?=\s)|—(?=\s))\s*/;
+/** Removes any leading bullet / dash / symbol / emoji (•, ·, ◦, ▪, ➤, ✓, ❖, Word's private-use bullets…) from a line.
+    Keeps letters, digits, fractions, quotes, brackets and the "# " heading marker. */
+export function stripBullets(line) {
+  return String(line).replace(/^[^\p{L}\p{N}\p{M}"'“‘(\[#.]+/u, '').replace(/^\.+(?!\d)\s*/, '').trim();
+}
 const STEP_NUM = /^(?:(?:step|adım)\s*\d+\s*[:.)\-–]?\s*|\d{1,2}\s*[.):]\s+|\d{1,2}\s*-\s+(?=\D))/i;
 
 function clean(line) {
-  let s = line.replace(/[​-‍⁠﻿]/g, '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim();
+  let s = line.replace(/[​-‍⁠﻿]/g, '').replace(/ /g, ' ').replace(/\*\*|__/g, '').replace(/\s+/g, ' ').trim();
+  s = s.replace(/^#{1,6}\s+(?=\p{L})/u, '');          // markdown "## Ingredients"
   let prev;
-  do { prev = s; s = s.replace(BULLET_LEAD, '').replace(EMOJI_LEAD, '').trim(); } while (s !== prev);
+  do { prev = s; s = stripBullets(s).replace(EMOJI_LEAD, '').trim(); } while (s !== prev);
   return s;
 }
 
@@ -240,7 +245,7 @@ function tidySteps(lines) {
 export function parseRecipe(input) {
   const text = String(input || '').replace(/\r\n?/g, '\n');
   const urlMatch = text.match(/https?:\/\/[^\s)]+/);
-  const lines = text.split('\n').map(clean);
+  const lines = text.split('\n').flatMap(l => l.split(/\s+[•●▪◦‣∙·]\s+/)).map(clean);
 
   const r = { title: '', servings: null, prepTime: '', cookTime: '', totalTime: '', ingredients: [], steps: [], notes: '', source: urlMatch ? urlMatch[0] : '', hints: [] };
   const buckets = { pre: [], ingredients: [], steps: [], notes: [], equipment: [] };
@@ -270,7 +275,7 @@ export function parseRecipe(input) {
       // "Ingredients: 2 eggs, flour…" — heading with content on the same line
       const m = s.match(/^([^:：]{3,30})[:：]\s*(.+)$/);
       if (m) for (const k of ['ingredients', 'steps', 'notes']) if (HEAD[k].test(m[1].trim()) && m[1].trim().split(' ').length <= 4) {
-        heading = k; s = m[2];
+        heading = k; s = clean(m[2]);
         break;
       }
       if (heading) {

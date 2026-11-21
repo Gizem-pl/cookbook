@@ -1,7 +1,7 @@
 /* app.js — all UI: navigation, views, editor, cooking mode, timers, grocery list, settings. */
 
 import * as S from './store.js';
-import { parseRecipe, splitIngredient, scaleLine, findTimers, formatClock, formatDuration, suggestSections } from './parser.js';
+import { parseRecipe, stripBullets, splitIngredient, scaleLine, findTimers, formatClock, formatDuration, suggestSections } from './parser.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -10,6 +10,7 @@ const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 const fmtDate = ts => new Date(ts).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
 const norm = s => String(s || '').toLocaleLowerCase('tr').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ı/g, 'i');
 const lines = v => String(v || '').split('\n').map(s => s.trim()).filter(Boolean);
+const bulletLines = v => String(v || '').split('\n').map(stripBullets).filter(Boolean);
 const viewEl = $('#view');
 const overlayRoot = $('#overlay-root');
 
@@ -817,8 +818,8 @@ function openEditor({ id, sectionId, mode } = {}) {
     draft.prepTime = $('#ed-prep', el).value.trim();
     draft.cookTime = $('#ed-cook', el).value.trim();
     draft.totalTime = $('#ed-total', el).value.trim();
-    draft.ingredients = lines($('#ed-ings', el).value);
-    draft.steps = lines($('#ed-steps', el).value).map(s => s.replace(/^(?:(?:step|adım)\s*\d+\s*[:.)\-–]?\s*|\d{1,2}\s*[.)]\s+)/i, ''));
+    draft.ingredients = bulletLines($('#ed-ings', el).value);
+    draft.steps = bulletLines($('#ed-steps', el).value).map(s => s.replace(/^(?:(?:step|adım)\s*\d+\s*[:.)\-–]?\s*|\d{1,2}\s*[.)]\s+)/i, ''));
     draft.notes = $('#ed-notes', el).value.trim();
     draft.source = $('#ed-source', el).value.trim();
   }
@@ -927,6 +928,14 @@ function openEditor({ id, sectionId, mode } = {}) {
       if (!nav.stack.length) nav.stack = [{ view: nav.tab, params: {} }];
       render();
       toast('Recipe deleted');
+    }
+  });
+
+  el.addEventListener('input', e => {
+    const t = e.target;
+    if (e.inputType === 'insertFromPaste' && (t.id === 'ed-ings' || t.id === 'ed-steps')) {
+      t.value = bulletLines(t.value).join('\n');
+      autoGrow(t);
     }
   });
 
@@ -1110,6 +1119,13 @@ document.addEventListener('visibilitychange', () => {
 });
 
 /* ---------- Boot ---------- */
+
+(function removeSavedBullets() {
+  for (const r of S.getRecipes()) {
+    const ing = r.ingredients.map(stripBullets).filter(Boolean), st = r.steps.map(stripBullets).filter(Boolean);
+    if (ing.join('\n') !== r.ingredients.join('\n') || st.join('\n') !== r.steps.join('\n')) S.patchRecipe(r.id, { ingredients: ing, steps: st });
+  }
+})();
 
 applyTextSize();
 render();
