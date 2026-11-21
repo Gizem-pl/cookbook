@@ -1,6 +1,6 @@
 /* Offline shell: cache-first for app files, refreshed from the network in the background.
    Recipes live in localStorage and photos in IndexedDB, never in this cache. */
-const CACHE = 'cookbook-v1';
+const CACHE = 'cookbook-v2';
 const ASSETS = ['./', './index.html', './style.css', './app.js', './store.js', './parser.js',
   './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 

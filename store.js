@@ -15,7 +15,7 @@ const PHOTO_STORE = 'photos';
 
 export const DEFAULT_SECTIONS = [
   ['soups', '🍜', 'Soups'], ['sushi', '🍣', 'Sushi'], ['bowls', '🥣', 'Bowls'], ['pasta', '🍝', 'Pasta'],
-  ['curries', '🍛', 'Curries'], ['dumplings', '🥟', 'Dumplings'], ['salads', '🥗', 'Salads'], ['breakfast', '🍳', 'Breakfast'],
+  ['salads', '🥗', 'Salads'], ['breakfast', '🍳', 'Breakfast'],
   ['baking', '🥐', 'Baking'], ['desserts', '🍰', 'Desserts'], ['cocktails', '🍸', 'Cocktails']
 ].map(([key, emoji, name]) => ({ id: 'sec_' + key, key, emoji, name }));
 

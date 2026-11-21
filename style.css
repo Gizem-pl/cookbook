@@ -10,11 +10,11 @@
   --ink: #F3ECE3;
   --sub: #C4B8AE;
   --muted: #9D918A;
-  --wine: #7A1F35;
-  --wine-2: #9A2B47;
-  --rose: #DB8195;
-  --wine-soft: rgba(154, 43, 71, .20);
-  --wine-line: rgba(219, 129, 149, .35);
+  --wine: #581728;
+  --wine-2: #722036;
+  --rose: #D48C9B;
+  --wine-soft: rgba(114, 32, 54, .30);
+  --wine-line: rgba(212, 140, 155, .32);
   --gold: #D9BF8E;
   --danger: #EE9A9A;
   --radius: 16px;
@@ -37,7 +37,7 @@ body {
 }
 body::before {   /* soft burgundy glow at the top */
   content: ""; position: fixed; inset: 0 0 auto 0; height: 420px; pointer-events: none; z-index: -1;
-  background: radial-gradient(120% 70% at 50% -10%, rgba(122, 31, 53, .34), transparent 70%);
+  background: radial-gradient(120% 70% at 50% -10%, rgba(88, 23, 40, .34), transparent 70%);
 }
 body.locked { overflow: hidden; }
 [hidden] { display: none !important; }
@@ -164,7 +164,7 @@ b, strong { font-weight: 600; }
   border-radius: 14px; font-size: 16px; font-weight: 600; cursor: pointer; transition: transform .1s ease, filter .1s ease;
 }
 .btn:active { transform: scale(.98); }
-.btn.primary { background: linear-gradient(180deg, var(--wine-2), var(--wine)); color: #FBF3EA; box-shadow: 0 6px 18px rgba(122, 31, 53, .35), inset 0 1px 0 rgba(255, 255, 255, .12); }
+.btn.primary { background: linear-gradient(180deg, var(--wine-2), var(--wine)); color: #FBF3EA; box-shadow: 0 6px 18px rgba(88, 23, 40, .35), inset 0 1px 0 rgba(255, 255, 255, .12); }
 .btn.ghost { background: var(--surface); border: 1px solid var(--line); color: var(--ink); }
 .btn.danger { color: var(--danger); }
 .btn.sm { min-height: 38px; padding: 0 14px; font-size: 14px; border-radius: 11px; }
@@ -179,7 +179,7 @@ label.btn { position: relative; }
 .empty p { margin: 0 0 16px; }
 .empty-hero {
   padding: 26px 20px; border-radius: 20px; text-align: center;
-  background: radial-gradient(120% 120% at 50% 0%, rgba(122, 31, 53, .35), var(--card) 70%); border: 1px solid var(--wine-line);
+  background: radial-gradient(120% 120% at 50% 0%, rgba(88, 23, 40, .35), var(--card) 70%); border: 1px solid var(--wine-line);
 }
 .empty-hero .btn-row { justify-content: center; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 16px; margin-top: 14px; }
@@ -324,7 +324,7 @@ p.source { color: var(--sub); }
 .add-ring {
   width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center; margin-top: -4px;
   background: linear-gradient(180deg, var(--wine-2), var(--wine)); color: #FBF3EA;
-  box-shadow: 0 6px 20px rgba(122, 31, 53, .55), inset 0 1px 0 rgba(255, 255, 255, .16), 0 0 0 4px var(--bg);
+  box-shadow: 0 6px 20px rgba(88, 23, 40, .55), inset 0 1px 0 rgba(255, 255, 255, .16), 0 0 0 4px var(--bg);
 }
 .add-ring svg { width: 24px; height: 24px; stroke-width: 2.2; }
 .badge {
@@ -436,7 +436,7 @@ body.cooking #timers { top: calc(env(safe-area-inset-top) + 70px); bottom: auto;
 .cook.open { opacity: 1; }
 .cook::before {
   content: ""; position: absolute; inset: 0; pointer-events: none;
-  background: radial-gradient(100% 60% at 50% 0%, rgba(122, 31, 53, .28), transparent 70%);
+  background: radial-gradient(100% 60% at 50% 0%, rgba(88, 23, 40, .28), transparent 70%);
 }
 .cook > * { position: relative; }
 .cook-top { display: flex; align-items: center; gap: 12px; max-width: 640px; width: 100%; margin: 0 auto; }
