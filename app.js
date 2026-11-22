@@ -17,8 +17,7 @@ const ICON = {
   back: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>',
   star: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.5 5.3 5.8.7-4.3 4 1.1 5.7L12 16.5l-5.1 2.8 1.1-5.7-4.3-4 5.8-.7z"/></svg>',
   search: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>',
-  close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
-  speak: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>'
+  close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>'
 };
 
 /* ---------- Toast ---------- */
@@ -376,6 +375,14 @@ const VIEWS = {
     <header class="page-head"><h1>Settings</h1></header>
 
     <section class="card">
+      <h2>Appearance</h2>
+      <p class="hint">Auto follows your iPhone's light or dark mode.</p>
+      <div class="seg" role="radiogroup" aria-label="Appearance">
+        ${[['auto', 'Auto'], ['light', '☀️ Light'], ['dark', '🌙 Dark']].map(([k, l]) => `<button class="seg-b ${st.theme === k ? 'on' : ''}" data-act="theme" data-v="${k}" role="radio" aria-checked="${st.theme === k}">${l}</button>`).join('')}
+      </div>
+    </section>
+
+    <section class="card">
       <h2>Reading size</h2>
       <p class="hint">Text size for recipes and cooking mode.</p>
       <div class="seg" role="radiogroup" aria-label="Reading size">
@@ -499,6 +506,14 @@ function autoGrow(el) { el.style.height = 'auto'; el.style.height = el.scrollHei
 
 function applyTextSize() { document.documentElement.dataset.size = S.getSettings().textSize; }
 
+const darkMQ = matchMedia('(prefers-color-scheme: dark)');
+function applyTheme() {
+  const t = S.getSettings().theme, dark = t === 'dark' || (t !== 'light' && darkMQ.matches);
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  $('meta[name="theme-color"]')?.setAttribute('content', dark ? '#110E10' : '#F7F1E8');
+}
+darkMQ.addEventListener?.('change', applyTheme);
+
 /* ---------- Global events ---------- */
 
 $('#tabbar').addEventListener('click', e => {
@@ -557,6 +572,7 @@ document.addEventListener('click', async e => {
     case 'g-clear-all': if (confirm('Clear the whole grocery list?')) { S.saveGrocery([]); rerender(); } break;
     case 'g-share': shareGrocery(); break;
 
+    case 'theme': S.saveSettings({ theme: b.dataset.v }); applyTheme(); rerender(); break;
     case 'text-size': S.saveSettings({ textSize: b.dataset.v }); applyTextSize(); rerender(); break;
     case 'backup': doBackup(); break;
   }
@@ -988,55 +1004,9 @@ async function keepAwake(on) {
   return false;
 }
 
-/* ---------- Read aloud (the device's own voice: free, offline, no AI) ---------- */
-
-const canSpeak = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
-function recipeLang(r) {
-  const t = [r.title, ...r.ingredients, ...r.steps].join(' ');
-  return /[ğışİĞŞ]/.test(t) || /\b(?:ve|bir|dakika|ekleyin|pişirin|karıştırın|için)\b/i.test(t) ? 'tr' : 'en';
-}
-function pickVoice(lang) {
-  const vs = speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith(lang));
-  const score = v => (/premium|enhanced|natural/i.test(v.name) ? 4 : 0) + (v.localService ? 2 : 0) + (v.default ? 1 : 0) +
-    (lang === 'en' && /^en-(?:gb|us)/i.test(v.lang) ? 1 : 0);
-  return vs.sort((a, b) => score(b) - score(a))[0] || null;
-}
-if (canSpeak) { speechSynthesis.getVoices(); speechSynthesis.addEventListener?.('voiceschanged', () => speechSynthesis.getVoices()); }
-function speakable(text, lang) {
-  let t = String(text).replace(/⏱/g, '').replace(/(\d)\s*°\s*C\b/g, lang === 'tr' ? '$1 derece' : '$1 degrees Celsius')
-    .replace(/(\d)\s*°\s*F\b/g, '$1 degrees Fahrenheit').replace(/°/g, lang === 'tr' ? ' derece' : ' degrees');
-  if (lang === 'tr') t = t.replace(/\byk\b/gi, 'yemek kaşığı').replace(/\bçk\b/gi, 'çay kaşığı').replace(/\bdk\b/gi, 'dakika').replace(/\bsb\b/gi, 'su bardağı');
-  else t = t.replace(/\btbsps?\b|\bTbsp\b/g, 'tablespoons').replace(/\btsps?\b/gi, 'teaspoons').replace(/\bmins?\b/gi, 'minutes')
-    .replace(/\bhrs?\b/gi, 'hours').replace(/(\d)\s*g\b/g, '$1 grams').replace(/(\d)\s*kg\b/g, '$1 kilograms').replace(/(\d)\s*ml\b/gi, '$1 millilitres')
-    .replace(/\boz\b/g, 'ounces').replace(/\blbs?\b/g, 'pounds');
-  return t;
-}
-function speak(text, lang, onEnd) {
-  if (!canSpeak) return;
-  const busy = speechSynthesis.speaking || speechSynthesis.pending;
-  if (busy) speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(speakable(text, lang));
-  const v = pickVoice(lang);
-  if (v) u.voice = v;
-  u.lang = v ? v.lang : lang === 'tr' ? 'tr-TR' : 'en-GB';
-  u.rate = 0.95;
-  u.onend = u.onerror = () => onEnd?.();
-  // iOS only lets speech start straight from a tap; but it can drop an utterance queued right after cancel()
-  if (busy) setTimeout(() => speechSynthesis.speak(u), 60); else speechSynthesis.speak(u);
-}
-function stopSpeaking() { if (canSpeak) speechSynthesis.cancel(); }
-
 function openCook(r) {
   let i = 0, drawer = false, awake = false;
-  let reading = !!S.getSettings().readAloud && canSpeak, talking = false;
-  const steps = methodSteps(r.steps), n = steps.length, lang = recipeLang(r);
-  const readStep = () => {
-    const st = steps[i];
-    const intro = st.head && (i === 0 || steps[i - 1].head !== st.head) ? st.head + '. ' : '';
-    talking = true; markTalking();
-    speak(intro + st.text, lang, () => { talking = false; markTalking(); });
-  };
-  const markTalking = () => $('.cook-speak', el)?.classList.toggle('talking', talking);
+  const steps = methodSteps(r.steps), n = steps.length;
   const el = document.createElement('div');
   el.className = 'cook overlay-own reading';
   el.setAttribute('role', 'dialog');
@@ -1053,7 +1023,6 @@ function openCook(r) {
       <div class="cook-top">
         <button class="icon-btn" data-c="close" aria-label="Close cooking mode">${ICON.close}</button>
         <div class="cook-title">${esc(r.title)}</div>
-        ${canSpeak ? `<button class="icon-btn cook-speak ${reading ? 'on' : ''} ${talking ? 'talking' : ''}" data-c="speak" aria-pressed="${reading}" aria-label="${reading ? 'Stop reading aloud' : 'Read steps aloud'}">${ICON.speak}</button>` : ''}
         <button class="pill-btn ${drawer ? 'on' : ''}" data-c="ings">Ingredients</button>
       </div>
       <div class="cook-progress" aria-hidden="true"><i style="width:${((i + 1) / n) * 100}%"></i></div>
@@ -1076,7 +1045,6 @@ function openCook(r) {
       </div>`;
   }
   function close(done) {
-    stopSpeaking();
     keepAwake(false);
     document.body.classList.remove('cooking');
     el.classList.remove('open');
@@ -1085,7 +1053,7 @@ function openCook(r) {
     if (done) toast('Bon appétit! 🍽️');
     rerender();
   }
-  const goStep = d => { const j = i + d; if (j < 0) return; if (j >= n) { close(true); return; } i = j; draw(); if (reading) readStep(); else stopSpeaking(); };
+  const goStep = d => { const j = i + d; if (j < 0) return; if (j >= n) { close(true); return; } i = j; draw(); };
 
   el.addEventListener('click', e => {
     if (e.target.closest('.tchip')) return;          // timer chips are handled globally
@@ -1096,12 +1064,6 @@ function openCook(r) {
     if (a === 'prev') goStep(-1);
     if (a === 'next') goStep(1);
     if (a === 'ings') { drawer = !drawer; draw(); }
-    if (a === 'speak') {
-      reading = !reading;
-      S.saveSettings({ readAloud: reading });
-      if (reading) { toast(lang === 'tr' ? '🔊 Adımlar sesli okunacak' : '🔊 Each step will be read aloud'); draw(); readStep(); }
-      else { stopSpeaking(); talking = false; draw(); }
-    }
     if (a === 'ing') {
       const set = checksOf(r.id), k = +b.dataset.i;
       set.has(k) ? set.delete(k) : set.add(k);
@@ -1116,7 +1078,6 @@ function openCook(r) {
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) goStep(dx < 0 ? 1 : -1);
   });
   draw();
-  if (reading) readStep();
 }
 
 /* ---------- Timers ---------- */
@@ -1199,6 +1160,7 @@ document.addEventListener('visibilitychange', () => {
 /* ---------- Boot ---------- */
 
 applyTextSize();
+applyTheme();
 render();
 drawTimers();
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

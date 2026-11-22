@@ -19,7 +19,7 @@ export const DEFAULT_SECTIONS = [
   ['baking', '🥐', 'Baking'], ['desserts', '🍰', 'Desserts'], ['cocktails', '🍸', 'Cocktails']
 ].map(([key, emoji, name]) => ({ id: 'sec_' + key, key, emoji, name }));
 
-export const DEFAULT_SETTINGS = { textSize: 'm', lastBackup: 0 };
+export const DEFAULT_SETTINGS = { textSize: 'm', theme: 'auto', lastBackup: 0 };
 
 /* ---------- localStorage helpers ---------- */
 
