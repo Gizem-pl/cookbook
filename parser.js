@@ -266,21 +266,43 @@ function tidyIngredients(lines) {
   return out;
 }
 
+/** A sub-heading inside a method: "Season the sushi:", "For the sauce", "## Topping", "**Dressing**", "Sos için". */
+export function stepHeading(line) {
+  let s = String(line || '').replace(STEP_NUM, '').trim();
+  let m;
+  if ((m = s.match(/^#{1,6}\s*(.+)$/))) s = m[1];
+  else if ((m = s.match(/^\*{0,2}(.{2,50}?)\*\*:?$/))) s = m[1];
+  else if (!(s.length <= 50 && !QTY_RE.test(s) && (
+    /^[^.!?:]{2,49}[:：]$/.test(s) && s.split(' ').length <= 7 ||
+    /^for (?:the )?\S/i.test(s) && s.split(' ').length <= 5 && !/[.!?,]/.test(s) ||
+    /^[^.!?:,]{2,30}\biçin$/i.test(s)
+  ))) return null;
+  s = s.replace(/[:：]\s*$/, '').replace(/\*+/g, '').trim();
+  if (!s) return null;
+  return s.charAt(0).toLocaleUpperCase() + s.slice(1);
+}
+
 function tidySteps(lines) {
   const raw = [];
   for (let i = 0; i < lines.length; i++) {
     let s = lines[i];
     // "1" or "Step 1" alone on a line → belongs to the next line
     if (/^(?:(?:step|adım)\s*)?\d{1,2}[.):]?$/i.test(s)) continue;
+    const numbered = STEP_NUM.test(s);
+    const last = raw[raw.length - 1];
+    const fresh = numbered || !last || last.startsWith('#') || /[.!?:)"”]$/.test(last) || !/^[a-zçğıöşü(]/.test(s.trim());
+    const head = fresh && stepHeading(s);
+    if (head) { raw.push('# ' + head); continue; }
     s = s.replace(STEP_NUM, '').trim();
     if (!s) continue;
-    const last = raw[raw.length - 1];
     // a sentence that was wrapped onto the next line
-    if (last && !/[.!?:)"”]$/.test(last) && /^[a-zçğıöşü(]/.test(s)) raw[raw.length - 1] = last + ' ' + s;
+    if (last && !last.startsWith('#') && !/[.!?:)"”]$/.test(last) && /^[a-zçğıöşü(]/.test(s)) raw[raw.length - 1] = last + ' ' + s;
     else raw.push(s);
   }
-  if (raw.length === 1 && raw[0].length > 220) return splitSentences(raw[0]);
-  return raw;
+  // a heading with no steps under it is just noise
+  const out = raw.filter((s, k) => !(s.startsWith('#') && (k === raw.length - 1 || raw[k + 1].startsWith('#'))));
+  if (out.length === 1 && out[0].length > 220) return splitSentences(out[0]);
+  return out;
 }
 
 /**
@@ -348,16 +370,17 @@ export function parseRecipe(input) {
         const m = s.match(re);
         if (!m) continue;
         let val = (m[1] || '').trim();
+        const iBefore = i;
         // value on the next line ("Prep Time" ⏎ "15 minutes")
         if (!val && i + 1 < lines.length) { val = lines[i + 1]; i++; if (/^\d+$/.test(val) && /^(?:mins?|minutes?|hours?|servings?|people|dakika|saat|ki[şs]ilik)$/i.test(lines[i + 1] || '')) val += ' ' + lines[++i]; }
         if (key === 'servings') {
           const n = val.match(/\d+/);
-          if (!n) continue;
+          if (!n) { i = iBefore; continue; }
           if (!r.servings) r.servings = +n[0];
         } else if (key === 'hint') {
           r.hints.push(val);
         } else if (key !== 'ignore') {
-          if (!isTimeValue(val)) continue;
+          if (!isTimeValue(val)) { i = iBefore; continue; }
           if (!r[key]) r[key] = shortTime(val);
         }
         metaHit = true;
@@ -383,13 +406,21 @@ export function parseRecipe(input) {
   let ings = buckets.ingredients, steps = buckets.steps, leftovers = [];
   if (!sawIng && !sawSteps) {
     // no headings at all: sort line by line
-    for (const l of pre) (looksLikeIngredient(l) && !STEP_NUM.test(l) ? ings : steps).push(l);
+    const isIng = l => looksLikeIngredient(l) && !STEP_NUM.test(l);
+    pre.forEach((l, k) => {
+      if (stepHeading(l) && !QTY_RE.test(l)) {
+        const next = pre.slice(k + 1).find(x => !stepHeading(x));
+        (next === undefined || isIng(next) ? ings : steps).push(l);
+      } else (isIng(l) ? ings : steps).push(l);
+    });
   } else if (!sawIng) {
     for (const l of pre) (looksLikeIngredient(l) ? ings : leftovers).push(l);
   } else if (!sawSteps) {
     // steps often follow the ingredient list without a heading
     const moved = [];
-    while (ings.length && (!looksLikeIngredient(ings[ings.length - 1]) || STEP_NUM.test(ings[ings.length - 1]))) moved.unshift(ings.pop());
+    const isStep = l => !looksLikeIngredient(l) || STEP_NUM.test(l);
+    // method sub-headings ("Season the sushi:") between steps move along with them
+    while (ings.length && (isStep(ings[ings.length - 1]) || moved.length && isStep(moved[0]) && stepHeading(ings[ings.length - 1]))) moved.unshift(ings.pop());
     steps = moved;
     leftovers = pre;
   } else {
