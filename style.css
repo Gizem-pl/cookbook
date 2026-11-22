@@ -166,12 +166,12 @@ b, strong { font-weight: 600; }
 .sec-n { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
 
 /* ---------- Recipe cards ---------- */
-.strip { display: flex; gap: 12px; overflow-x: auto; margin: 0 -16px; padding: 0 16px 6px; scroll-padding-inline: 16px; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.strip { display: flex; align-items: flex-start; gap: 12px; overflow-x: auto; margin: 0 -16px; padding: 0 16px 6px; scroll-padding-inline: 16px; scroll-snap-type: x mandatory; scrollbar-width: none; }
 .strip::after { content: ""; flex: 0 0 4px; }   /* right-hand gutter (scroll containers drop the end padding) */
 .strip::-webkit-scrollbar { display: none; }
 .strip .rcard { flex: 0 0 150px; scroll-snap-align: start; }
 .r-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px 12px; margin-top: 14px; }
-.rcard { display: block; text-align: left; min-width: 0; }
+.rcard { display: flex; flex-direction: column; justify-content: flex-start; align-self: start; text-align: left; min-width: 0; }   /* buttons centre their content: pin it to the top so photos line up */
 .rc-img {
   position: relative; aspect-ratio: 4 / 5; border-radius: var(--radius); overflow: hidden;
   background: radial-gradient(120% 90% at 30% 10%, var(--rc-a), var(--rc-b) 70%); border: 1px solid var(--line);
