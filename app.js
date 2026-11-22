@@ -1202,5 +1202,14 @@ applyTextSize();
 render();
 drawTimers();
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+    // Check for a new version whenever the app is brought back to the foreground.
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
+  }).catch(() => {});
+  // When a new version takes over, reload once so it shows straight away.
+  let hadController = !!navigator.serviceWorker.controller, reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadController && !reloaded) { reloaded = true; location.reload(); }
+    hadController = true;
+  });
 }
