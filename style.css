@@ -113,7 +113,7 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
 @keyframes in-back { from { opacity: 0; transform: translateX(-22px); } to { opacity: 1; transform: none; } }
 @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 /* cards drift in one after another when a screen opens (not when it just redraws) */
-#view[class^="anim"] :is(.feature, .quick, .sec-tile, .rcard, .rrow, .r-block) { animation: rise .5s cubic-bezier(.2, .8, .2, 1) backwards; }
+#view[class^="anim"] :is(.quick, .sec-tile, .rcard, .rrow, .r-block) { animation: rise .5s cubic-bezier(.2, .8, .2, 1) backwards; }
 #view[class^="anim"] :is(.sec-tile, .rcard):nth-child(2) { animation-delay: .04s; }
 #view[class^="anim"] :is(.sec-tile, .rcard):nth-child(3) { animation-delay: .08s; }
 #view[class^="anim"] :is(.sec-tile, .rcard):nth-child(4) { animation-delay: .12s; }
@@ -160,22 +160,8 @@ b, strong { font-weight: 600; }
 .nd-t { flex: 1; }
 .nd-go { color: var(--rose); font-size: 20px; }
 
-/* ---------- Featured recipe ---------- */
-.feature { position: relative; display: block; width: 100%; text-align: left; border-radius: 22px; overflow: hidden; isolation: isolate;
-  border: 1px solid var(--line); box-shadow: 0 24px 50px -24px var(--shadow), 0 0 0 1px rgba(217, 191, 142, .06) inset; transition: transform .2s ease; }
-.feature:active { transform: scale(.985); }
-.ft-img { aspect-ratio: 4 / 4.4; background: radial-gradient(120% 90% at 30% 10%, var(--rc-a), var(--rc-b) 70%); }
-.ft-img img { width: 100%; height: 100%; object-fit: cover; }
-.ft-img .cover .cv-l { font-size: 120px; }
-.feature::after { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, transparent 38%, rgba(12, 8, 10, .25) 55%, rgba(12, 8, 10, .88)); }
-.ft-cap { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: 20px 20px 22px; color: #FBF3EA; }
-.ft-cap .eyebrow { color: #E7C9A0; }
-.ft-cap h2 { font-size: 30px; line-height: 1.12; color: #FBF3EA; text-shadow: 0 2px 18px rgba(0, 0, 0, .35); }
-.ft-meta { margin: 8px 0 0; font-size: 13.5px; color: rgba(251, 243, 234, .78); letter-spacing: .02em; }
-.ft-meta i { font-style: normal; margin: 0 8px; color: #E7C9A0; }
-
 /* ---------- Collections row ---------- */
-.quick { display: flex; margin-top: 18px; border-top: 1px solid var(--wine-line); border-bottom: 1px solid var(--wine-line); }
+.quick { display: flex; margin-top: 30px; border-top: 1px solid var(--wine-line); border-bottom: 1px solid var(--wine-line); }
 .quick > button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 4px 13px; transition: background .15s ease; }
 .quick > button + button { border-left: 1px solid var(--line); }
 .quick > button:active { background: var(--wine-soft); }
@@ -188,6 +174,7 @@ b, strong { font-weight: 600; }
 /* ---------- Headings with a fading hairline ---------- */
 .row-head { display: flex; align-items: center; gap: 14px; margin: 34px 2px 14px; }
 .row-head.flush { margin: 0 0 6px; }
+.row-head.first { margin-top: 10px; }
 .row-head h2 { flex: 1; display: flex; align-items: center; gap: 14px; font-style: italic; font-size: 23px; }
 .row-head h2::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--wine-line), transparent); }
 .row-head .link { font-size: 14px; letter-spacing: .02em; }
@@ -211,20 +198,12 @@ b, strong { font-weight: 600; }
 .sec-tile.photo .st-name { color: #FBF3EA; }
 .sec-tile.photo .st-n { color: rgba(251, 243, 234, .72); }
 
-/* ---------- Typeset covers (recipes without a photo) ---------- */
-.cover { position: absolute; inset: 0; padding: 9px; display: flex; }
-.cv-frame {
-  flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-  border: 1px solid rgba(217, 191, 142, .38); border-radius: calc(var(--radius) - 7px); outline: 1px solid rgba(217, 191, 142, .14); outline-offset: -5px;
-}
-html[data-theme="light"] .cv-frame { border-color: rgba(154, 118, 53, .45); outline-color: rgba(154, 118, 53, .18); }
-.cv-l { font: italic 400 64px/1 var(--serif); color: var(--gold); text-shadow: 0 6px 20px rgba(0, 0, 0, .25); }
-.cv-ico { color: var(--rose); opacity: .85; }
-.cv-ico svg { width: 18px; height: 18px; stroke-width: 1.4; }
-.cover.sm { padding: 4px; }
-.cover.sm .cv-frame { border-radius: 8px; outline: 0; }
-.cover.sm .cv-l { font-size: 24px; }
-.cover.sm .cv-ico { display: none; }
+/* ---------- Covers for recipes without a photo: the section's icon in a gold circle ---------- */
+.cover { position: absolute; inset: 0; display: grid; place-items: center; }
+.cv-ico { position: relative; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; color: var(--gold); border: 1px solid var(--wine-line); }
+.cv-ico svg { width: 30px; height: 30px; stroke-width: 1.2; }
+.cover.sm .cv-ico { width: auto; height: auto; border: 0; }
+.cover.sm .cv-ico svg { width: 24px; height: 24px; stroke-width: 1.4; }
 
 /* ---------- Recipe cards ---------- */
 .strip { display: flex; align-items: flex-start; gap: 12px; overflow-x: auto; margin: 0 -16px; padding: 0 16px 6px; scroll-padding-inline: 16px; scroll-snap-type: x mandatory; scrollbar-width: none; }
@@ -616,14 +595,4 @@ body.cooking #timers { top: calc(env(safe-area-inset-top) + 70px); bottom: auto;
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
-/* Featured recipe without a photo: monogram cover above, caption below on the card colour. */
-.feature:not(.photo) { background: var(--card); }
-.feature:not(.photo)::after { display: none; }
-.feature:not(.photo) .ft-img { aspect-ratio: 16 / 10; position: relative; }
-.feature:not(.photo) .ft-img .cover .cv-l { font-size: 96px; }
-.feature:not(.photo) .ft-cap { position: static; color: var(--ink); padding: 16px 20px 20px; text-align: center; }
-.feature:not(.photo) .ft-cap .eyebrow { color: var(--rose); }
-.feature:not(.photo) .ft-cap h2 { color: var(--ink); text-shadow: none; }
-.feature:not(.photo) .ft-meta { color: var(--muted); }
-.feature:not(.photo) .ft-meta i { color: var(--gold); }
 .rrow:active { opacity: .7; }

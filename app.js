@@ -91,10 +91,9 @@ function recipeEmoji(r, map) {
   for (const id of r.sectionIds || []) { const s = map.get(id); if (s) return s.emoji; }
   return '🍽️';
 }
-/** A recipe with no photo gets a typeset cover: its initial in a gold hairline frame, like a monogrammed menu. */
-function initialOf(r) { return [...String(r.title || '').replace(/^[^\p{L}\p{N}]+/u, '')][0]?.toLocaleUpperCase('tr') || '·'; }
+/** A recipe with no photo shows its section's line icon in a gold circle, like the section tiles. */
 function coverHTML(r, map, small = false) {
-  return `<span class="cover ${small ? 'sm' : ''}"><span class="cv-frame"><span class="cv-ico">${secIcon(recipeEmoji(r, map))}</span><span class="cv-l">${esc(initialOf(r))}</span></span></span>`;
+  return `<span class="cover ${small ? 'sm' : ''}"><span class="cv-ico">${secIcon(recipeEmoji(r, map))}</span></span>`;
 }
 function timeOf(r) { return r.totalTime || r.cookTime || r.prepTime || ''; }
 
@@ -202,12 +201,6 @@ const VIEWS = {
     const st = S.getSettings();
     const nudge = recipes.length >= 5 && Date.now() - (st.lastBackup || 0) > 30 * 864e5;
 
-    // A different recipe to feature each day: favourites with photos first, then any with a photo, then anything.
-    const day = Math.floor((Date.now() - new Date().getTimezoneOffset() * 6e4) / 864e5);
-    const pool = [r => r.favorite && r.hasPhoto, r => r.hasPhoto, r => r.favorite, () => true]
-      .map(f => recipes.filter(f)).find(p => p.length) || [];
-    const pick = pool.length > 1 ? pool[day % pool.length] : pool[0];
-
     // Each section's tile shows a photo from its newest recipe that has one.
     const coverOf = new Map();
     for (const r of byNew) if (r.hasPhoto) for (const id of r.sectionIds || []) if (!coverOf.has(id)) coverOf.set(id, r);
@@ -228,15 +221,11 @@ const VIEWS = {
 
     ${nudge ? `<button class="nudge" data-act="go-settings">${ICONS.shield}<span class="nd-t">${st.lastBackup ? 'It’s been a while since your last backup' : 'Save your first backup'}</span><span class="nd-go">›</span></button>` : ''}
 
-    ${pick ? `
-    <button class="feature ${pick.hasPhoto ? 'photo' : ''}" data-act="recipe" data-id="${esc(pick.id)}">
-      <div class="ft-img">${pick.hasPhoto ? photoImg(pick, false) : coverHTML(pick, map)}</div>
-      <div class="ft-cap">
-        <p class="eyebrow">${pick.favorite ? 'A favourite, for today' : 'From your cookbook'}</p>
-        <h2>${esc(pick.title || 'Untitled')}</h2>
-        ${timeOf(pick) || pick.servings ? `<p class="ft-meta">${[timeOf(pick) && esc(timeOf(pick)), pick.servings && `Serves ${pick.servings}`].filter(Boolean).join('<i>·</i>')}</p>` : ''}
-      </div>
-    </button>` : ''}
+    <div class="row-head first"><h2>Sections</h2><button class="link" data-act="new-section">+ New</button></div>
+    <div class="sec-grid">
+      ${secs.map(s => tile(s.id, s.name, s.emoji, counts.get(s.id) || 0)).join('')}
+      ${unsorted ? tile('__none', 'Unsorted', '📎', unsorted) : ''}
+    </div>
 
     ${recipes.length ? `
     <nav class="quick" aria-label="Collections">
@@ -254,12 +243,6 @@ const VIEWS = {
         <button class="btn ghost" data-act="new-recipe" data-mode="write">${ICONS.pen} Write</button>
       </div>
     </div>`}
-
-    <div class="row-head"><h2>Sections</h2><button class="link" data-act="new-section">+ New</button></div>
-    <div class="sec-grid">
-      ${secs.map(s => tile(s.id, s.name, s.emoji, counts.get(s.id) || 0)).join('')}
-      ${unsorted ? tile('__none', 'Unsorted', '📎', unsorted) : ''}
-    </div>
 
     ${recent.length ? `
     <div class="row-head"><h2>Recently added</h2></div>
