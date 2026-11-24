@@ -1,6 +1,7 @@
 /* app.js — all UI: navigation, views, editor, cooking mode, timers, grocery list, settings. */
 
 import * as S from './store.js';
+import { ICONS, SECTION_CHOICES, iconName, secIcon } from './icons.js';
 import { parseRecipe, fixBulletWords, splitIngredient, scaleLine, findTimers, formatClock, formatDuration, suggestSections } from './parser.js';
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -45,12 +46,12 @@ const BACK_LABEL = { home: 'Cookbook', search: 'Search', grocery: 'Groceries', s
 function go(view, params = {}) {
   top().scroll = window.scrollY;
   nav.stack.push({ view, params });
-  render();
+  render('fwd');
   window.scrollTo(0, 0);
 }
 function back() {
   if (nav.stack.length > 1) nav.stack.pop();
-  render();
+  render('back');
   window.scrollTo(0, top().scroll || 0);
 }
 function switchTab(tab) {
@@ -58,13 +59,16 @@ function switchTab(tab) {
   if (nav.tab === tab && nav.stack.length === 1) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
   nav.tab = tab;
   nav.stack = [{ view: tab, params: {} }];
-  render();
+  render('fade');
   window.scrollTo(0, 0);
 }
-function render() {
+/** anim: 'fwd' | 'back' | 'fade' when moving between screens; nothing when redrawing the same screen. */
+function render(anim) {
   const cur = top();
+  viewEl.className = '';
   viewEl.innerHTML = VIEWS[cur.view](cur.params);
   viewEl.dataset.view = cur.view;
+  if (anim) { void viewEl.offsetWidth; viewEl.className = 'anim-' + anim; }
   $$('#tabbar .tab').forEach(b => b.classList.toggle('active', b.dataset.tab === nav.tab));
   hydratePhotos(viewEl);
   AFTER[cur.view]?.(cur.params);
@@ -87,6 +91,11 @@ function recipeEmoji(r, map) {
   for (const id of r.sectionIds || []) { const s = map.get(id); if (s) return s.emoji; }
   return '🍽️';
 }
+/** A recipe with no photo gets a typeset cover: its initial in a gold hairline frame, like a monogrammed menu. */
+function initialOf(r) { return [...String(r.title || '').replace(/^[^\p{L}\p{N}]+/u, '')][0]?.toLocaleUpperCase('tr') || '·'; }
+function coverHTML(r, map, small = false) {
+  return `<span class="cover ${small ? 'sm' : ''}"><span class="cv-frame"><span class="cv-ico">${secIcon(recipeEmoji(r, map))}</span><span class="cv-l">${esc(initialOf(r))}</span></span></span>`;
+}
 function timeOf(r) { return r.totalTime || r.cookTime || r.prepTime || ''; }
 
 function photoImg(r, thumb, cls = '') {
@@ -101,10 +110,10 @@ async function hydratePhotos(root) {
 }
 
 function card(r, map) {
-  const meta = [timeOf(r) && `⏱ ${esc(timeOf(r))}`, r.servings && `Serves ${r.servings}`].filter(Boolean).join(' · ');
+  const meta = [timeOf(r) && esc(timeOf(r)), r.servings && `Serves ${r.servings}`].filter(Boolean).join(' · ');
   return `<button class="rcard" data-act="recipe" data-id="${esc(r.id)}">
-    <div class="rc-img">${r.hasPhoto ? photoImg(r, true) : `<span class="rc-emoji">${esc(recipeEmoji(r, map))}</span>`}
-      ${r.favorite ? `<span class="rc-badge">${ICON.star}</span>` : r.wantToTry ? '<span class="rc-badge try">🔖</span>' : ''}
+    <div class="rc-img">${r.hasPhoto ? photoImg(r, true) : coverHTML(r, map)}
+      ${r.favorite ? `<span class="rc-badge">${ICON.star}</span>` : r.wantToTry ? `<span class="rc-badge try">${ICONS.bookmark}</span>` : ''}
     </div>
     <div class="rc-title">${esc(r.title || 'Untitled')}</div>
     ${meta ? `<div class="rc-meta">${meta}</div>` : ''}
@@ -127,7 +136,7 @@ function methodHTML(r) {
   return r.steps.map(s => {
     if (s.startsWith('#')) return `<li class="step-h">${esc(s.replace(/^#+\s*/, ''))}</li>`;
     const st = steps[k++];
-    return `<li class="step"><span class="step-n">${st.n}</span><p>${withTimers(st.text, st.label, r.title)}</p></li>`;
+    return `<li class="step"><span class="step-n">${st.n < 10 ? '0' + st.n : st.n}</span><p>${withTimers(st.text, st.label, r.title)}</p></li>`;
   }).join('');
 }
 
@@ -136,7 +145,7 @@ function withTimers(text, label, title) {
   let out = '', last = 0;
   for (const t of findTimers(text)) {
     out += esc(text.slice(last, t.index));
-    out += `<button class="tchip" data-act="timer" data-s="${t.seconds}" data-label="${esc(label)}" data-title="${esc(title)}">⏱ ${esc(t.text)}</button>`;
+    out += `<button class="tchip" data-act="timer" data-s="${t.seconds}" data-label="${esc(label)}" data-title="${esc(title)}">${ICONS.clock}${esc(t.text)}</button>`;
     last = t.index + t.length;
   }
   return out + esc(text.slice(last));
@@ -188,9 +197,27 @@ const VIEWS = {
       ids.forEach(id => counts.set(id, (counts.get(id) || 0) + 1));
     }
     const fav = recipes.filter(r => r.favorite).length, tryN = recipes.filter(r => r.wantToTry).length;
-    const recent = [...recipes].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 8);
+    const byNew = [...recipes].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    const recent = byNew.slice(0, 8);
     const st = S.getSettings();
     const nudge = recipes.length >= 5 && Date.now() - (st.lastBackup || 0) > 30 * 864e5;
+
+    // A different recipe to feature each day: favourites with photos first, then any with a photo, then anything.
+    const day = Math.floor((Date.now() - new Date().getTimezoneOffset() * 6e4) / 864e5);
+    const pool = [r => r.favorite && r.hasPhoto, r => r.hasPhoto, r => r.favorite, () => true]
+      .map(f => recipes.filter(f)).find(p => p.length) || [];
+    const pick = pool.length > 1 ? pool[day % pool.length] : pool[0];
+
+    // Each section's tile shows a photo from its newest recipe that has one.
+    const coverOf = new Map();
+    for (const r of byNew) if (r.hasPhoto) for (const id of r.sectionIds || []) if (!coverOf.has(id)) coverOf.set(id, r);
+    const tile = (id, name, emoji, n) => {
+      const c = coverOf.get(id);
+      return `<button class="sec-tile ${c ? 'photo' : ''}" data-act="section" data-id="${esc(id)}">
+        ${c ? photoImg(c, true) : `<span class="st-ico">${secIcon(emoji)}</span>`}
+        <span class="st-cap"><span class="st-name">${esc(name)}</span><span class="st-n">${plural(n, 'recipe')}</span></span>
+      </button>`;
+    };
 
     return `
     <header class="masthead">
@@ -199,32 +226,39 @@ const VIEWS = {
       <p class="tagline">${recipes.length ? `${plural(recipes.length, 'recipe')} · ${plural(secs.length, 'section')}` : 'Your favourite recipes, beautifully kept'}</p>
     </header>
 
-    ${nudge ? `<button class="nudge" data-act="go-settings">🔒 ${st.lastBackup ? 'It’s been a while since your last backup' : 'Save your first backup'} <span>›</span></button>` : ''}
+    ${nudge ? `<button class="nudge" data-act="go-settings">${ICONS.shield}<span class="nd-t">${st.lastBackup ? 'It’s been a while since your last backup' : 'Save your first backup'}</span><span class="nd-go">›</span></button>` : ''}
+
+    ${pick ? `
+    <button class="feature ${pick.hasPhoto ? 'photo' : ''}" data-act="recipe" data-id="${esc(pick.id)}">
+      <div class="ft-img">${pick.hasPhoto ? photoImg(pick, false) : coverHTML(pick, map)}</div>
+      <div class="ft-cap">
+        <p class="eyebrow">${pick.favorite ? 'A favourite, for today' : 'From your cookbook'}</p>
+        <h2>${esc(pick.title || 'Untitled')}</h2>
+        ${timeOf(pick) || pick.servings ? `<p class="ft-meta">${[timeOf(pick) && esc(timeOf(pick)), pick.servings && `Serves ${pick.servings}`].filter(Boolean).join('<i>·</i>')}</p>` : ''}
+      </div>
+    </button>` : ''}
 
     ${recipes.length ? `
-    <div class="quick">
-      <button class="quick-card" data-act="list" data-filter="fav"><span class="q-ico star">${ICON.star}</span><span class="q-label">Favorites</span><span class="q-n">${fav}</span></button>
-      <button class="quick-card" data-act="list" data-filter="try"><span class="q-ico">🔖</span><span class="q-label">Want to try</span><span class="q-n">${tryN}</span></button>
-      <button class="quick-card" data-act="list" data-filter="all"><span class="q-ico">📖</span><span class="q-label">All recipes</span><span class="q-n">${recipes.length}</span></button>
-    </div>` : `
+    <nav class="quick" aria-label="Collections">
+      <button data-act="list" data-filter="fav"><span class="q-ico star">${ICON.star}</span><span class="q-n">${fav}</span><span class="q-label">Favorites</span></button>
+      <button data-act="list" data-filter="try"><span class="q-ico">${ICONS.bookmark}</span><span class="q-n">${tryN}</span><span class="q-label">Want to try</span></button>
+      <button data-act="list" data-filter="all"><span class="q-ico">${ICONS.book}</span><span class="q-n">${recipes.length}</span><span class="q-label">All recipes</span></button>
+    </nav>` : `
     <div class="empty-hero">
+      <div class="ornament" aria-hidden="true"><i></i><span>✦</span><i></i></div>
       <p class="eyebrow">Start here</p>
       <h2>Add your first recipe</h2>
       <p class="sub">Paste one from anywhere and it gets sorted into ingredients and steps for you, or write your own.</p>
       <div class="btn-row">
-        <button class="btn primary" data-act="new-recipe" data-mode="paste">✨ Smart paste</button>
-        <button class="btn ghost" data-act="new-recipe" data-mode="write">✍️ Write</button>
+        <button class="btn primary" data-act="new-recipe" data-mode="paste">${ICONS.sparkle} Smart paste</button>
+        <button class="btn ghost" data-act="new-recipe" data-mode="write">${ICONS.pen} Write</button>
       </div>
     </div>`}
 
-    <div class="row-head"><h2>Sections</h2><button class="link" data-act="new-section">+ New section</button></div>
+    <div class="row-head"><h2>Sections</h2><button class="link" data-act="new-section">+ New</button></div>
     <div class="sec-grid">
-      ${secs.map(s => `<button class="sec-card" data-act="section" data-id="${esc(s.id)}">
-        <span class="sec-emoji">${esc(s.emoji)}</span>
-        <span class="sec-name">${esc(s.name)}</span>
-        <span class="sec-n">${counts.get(s.id) || 0}</span>
-      </button>`).join('')}
-      ${unsorted ? `<button class="sec-card" data-act="section" data-id="__none"><span class="sec-emoji">📎</span><span class="sec-name">Unsorted</span><span class="sec-n">${unsorted}</span></button>` : ''}
+      ${secs.map(s => tile(s.id, s.name, s.emoji, counts.get(s.id) || 0)).join('')}
+      ${unsorted ? tile('__none', 'Unsorted', '📎', unsorted) : ''}
     </div>
 
     ${recent.length ? `
@@ -253,7 +287,7 @@ const VIEWS = {
     return `
     ${topbar(sec ? `<button class="pill-btn" data-act="edit-section" data-id="${esc(sec.id)}">Edit</button>` : '')}
     <header class="page-head">
-      <div class="ph-emoji ${emoji === '★' ? 'star' : ''}">${emoji === '★' ? ICON.star : esc(emoji)}</div>
+      <div class="ph-ico ${emoji === '★' ? 'star' : ''}">${emoji === '★' ? ICON.star : emoji === '🔖' ? ICONS.bookmark : emoji === '📖' ? ICONS.book : secIcon(emoji)}</div>
       <h1>${esc(title)}</h1>
       <p class="sub">${plural(items.length, 'recipe')}</p>
     </header>
@@ -274,7 +308,7 @@ const VIEWS = {
     if (!r) return `${topbar()}<div class="empty"><p>This recipe was deleted.</p></div>`;
     const map = secMap(), f = scaleOf(r.id);
     const chips = (r.sectionIds || []).map(id => map.get(id)).filter(Boolean)
-      .map(s => `<button class="chip" data-act="section" data-id="${esc(s.id)}">${esc(s.emoji)} ${esc(s.name)}</button>`).join('');
+      .map(s => `<button data-act="section" data-id="${esc(s.id)}">${esc(s.name)}</button>`).join('<i>·</i>');
     const times = [['Prep', r.prepTime], ['Cook', r.cookTime], ['Total', r.totalTime]].filter(x => x[1]);
     const servingsNow = r.servings ? Math.max(1, Math.round(r.servings * f)) : null;
     const scaler = r.ingredients.some(l => !l.startsWith('#')) ? `
@@ -295,26 +329,27 @@ const VIEWS = {
     ${topbar(`<button class="icon-btn fav ${r.favorite ? 'on' : ''}" data-act="toggle-fav" aria-label="${r.favorite ? 'Remove from favorites' : 'Add to favorites'}">${ICON.star}</button>
       <button class="pill-btn" data-act="edit-recipe">Edit</button>`)}
     ${r.hasPhoto ? `<div class="hero">${photoImg(r, false)}</div>` : ''}
-    <header class="r-head">
-      ${chips ? `<div class="chips">${chips}</div>` : ''}
+    <header class="r-head ${r.hasPhoto ? 'on-hero' : ''}">
+      ${chips ? `<div class="r-secs">${chips}</div>` : ''}
       <h1 class="r-title">${esc(r.title || 'Untitled')}</h1>
+      <div class="ornament" aria-hidden="true"><i></i><span>✦</span><i></i></div>
       ${times.length || r.servings ? `<div class="r-times">
         ${r.servings ? `<div><span>Serves</span><b>${r.servings}</b></div>` : ''}
         ${times.map(([k, v]) => `<div><span>${k}</span><b>${withTimers(v, k, r.title)}</b></div>`).join('')}
       </div>` : ''}
       <div class="r-flags">
         <button class="flag ${r.favorite ? 'on' : ''}" data-act="toggle-fav">${ICON.star} Favorite</button>
-        <button class="flag ${r.wantToTry ? 'on' : ''}" data-act="toggle-try">🔖 Want to try</button>
+        <button class="flag ${r.wantToTry ? 'on' : ''}" data-act="toggle-try">${ICONS.bookmark} Want to try</button>
       </div>
     </header>
 
-    ${methodSteps(r.steps).length ? `<button class="btn primary wide cook-btn" data-act="cook">Start cooking</button>` : ''}
+    ${methodSteps(r.steps).length ? `<button class="btn primary wide cook-btn" data-act="cook">${ICONS.chef} Start cooking</button>` : ''}
 
     ${r.ingredients.length ? `
     <section class="r-block reading">
       <div class="block-head"><h2>Ingredients</h2>${scaler}</div>
       <ul class="ings">${ingredientsHTML(r)}</ul>
-      <button class="btn ghost wide" data-act="to-grocery">🛒 Add to grocery list</button>
+      <button class="btn ghost wide" data-act="to-grocery">${ICONS.cart} Add to grocery list</button>
     </section>` : ''}
 
     ${r.steps.length ? `
@@ -364,7 +399,7 @@ const VIEWS = {
         <button class="btn ghost sm" data-act="g-share">Share list</button>
         <button class="btn ghost sm" data-act="g-clear-done">Clear ticked</button>
         <button class="btn ghost sm danger" data-act="g-clear-all">Clear all</button>
-      </div>` : `<div class="empty"><p>Open a recipe and tap <b>🛒 Add to grocery list</b>, or type items above.</p></div>`}
+      </div>` : `<div class="empty"><p>Open a recipe and tap <b>Add to grocery list</b>, or type items above.</p></div>`}
     `;
   },
 
@@ -378,7 +413,7 @@ const VIEWS = {
       <h2>Appearance</h2>
       <p class="hint">Auto follows your iPhone's light or dark mode.</p>
       <div class="seg" role="radiogroup" aria-label="Appearance">
-        ${[['auto', 'Auto'], ['light', '☀️ Light'], ['dark', '🌙 Dark']].map(([k, l]) => `<button class="seg-b ${st.theme === k ? 'on' : ''}" data-act="theme" data-v="${k}" role="radio" aria-checked="${st.theme === k}">${l}</button>`).join('')}
+        ${[['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']].map(([k, l]) => `<button class="seg-b ${st.theme === k ? 'on' : ''}" data-act="theme" data-v="${k}" role="radio" aria-checked="${st.theme === k}">${l}</button>`).join('')}
       </div>
     </section>
 
@@ -395,7 +430,7 @@ const VIEWS = {
       <div class="row-head flush"><h2>Sections</h2><button class="link" data-act="new-section">+ New</button></div>
       <ul class="sec-list">
         ${secs.map((s, i) => `<li>
-          <span class="sl-emoji">${esc(s.emoji)}</span>
+          <span class="sl-ico">${secIcon(s.emoji)}</span>
           <span class="sl-name">${esc(s.name)}<small>${plural(count(s.id), 'recipe')}</small></span>
           <button class="mini" data-act="sec-move" data-d="-1" data-id="${esc(s.id)}" ${i === 0 ? 'disabled' : ''} aria-label="Move up">↑</button>
           <button class="mini" data-act="sec-move" data-d="1" data-id="${esc(s.id)}" ${i === secs.length - 1 ? 'disabled' : ''} aria-label="Move down">↓</button>
@@ -428,13 +463,30 @@ const VIEWS = {
       </ol>
       <p class="hint">From the Home Screen, Cookbook opens full-screen, works offline, and Safari keeps your recipes safe.</p>
     </section>
-    <p class="added">Cookbook · version 1</p>
+    <p class="added">Cookbook · version 2</p>
     `;
   }
 };
 
 const AFTER = {
-  recipe() { $$('textarea.auto', viewEl).forEach(autoGrow); },
+  recipe() {
+    $$('textarea.auto', viewEl).forEach(autoGrow);
+    const hero = $('.hero', viewEl), bar = $('.topbar', viewEl);
+    if (!hero || !bar) return;
+    bar.classList.add('over');
+    const img = $('img', hero);
+    let ticking = false;
+    const update = () => {
+      ticking = false;
+      if (!hero.isConnected) { removeEventListener('scroll', onScroll); return; }
+      const y = window.scrollY, h = hero.offsetHeight;
+      bar.classList.toggle('solid', y > h - 110);
+      if (y < h) img.style.transform = `translate3d(0, ${y * 0.35}px, 0) scale(${1 + Math.max(0, -y) / 600})`;
+    };
+    const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } };
+    addEventListener('scroll', onScroll, { passive: true });
+    update();
+  },
   search() {
     const q = $('#q');
     q.addEventListener('input', () => {
@@ -489,8 +541,8 @@ function searchResults(q) {
   hits.sort((a, b) => b.score - a.score || (a.r.title || '').localeCompare(b.r.title || ''));
   return `<p class="hint">${plural(hits.length, 'recipe')}</p><ul class="rrows">${hits.map(({ r, snippet }) => `
     <li><button class="rrow" data-act="recipe" data-id="${esc(r.id)}">
-      <span class="rr-img">${r.hasPhoto ? photoImg(r, true) : esc(recipeEmoji(r, map))}</span>
-      <span class="rr-t"><b>${esc(r.title || 'Untitled')}</b>${snippet ? `<small>🥕 ${esc(snippet)}</small>` : timeOf(r) ? `<small>⏱ ${esc(timeOf(r))}</small>` : ''}</span>
+      <span class="rr-img">${r.hasPhoto ? photoImg(r, true) : coverHTML(r, map, true)}</span>
+      <span class="rr-t"><b>${esc(r.title || 'Untitled')}</b>${snippet ? `<small>${esc(snippet)}</small>` : timeOf(r) ? `<small>${esc(timeOf(r))}</small>` : ''}</span>
       <span class="rr-go" aria-hidden="true">›</span>
     </button></li>`).join('')}</ul>`;
 }
@@ -671,8 +723,6 @@ function openSheet(inner) {
   return { el: wrap.querySelector('.sheet'), close };
 }
 
-const EMOJIS = ('🍜 🍲 🍣 🍱 🍙 🥣 🥗 🍝 🍕 🍛 🥟 🥘 🌮 🌯 🥙 🍔 🥪 🍳 🥞 🧇 🥐 🥖 🍞 🥯 🧁 🍰 🎂 🍪 🍩 🍫 🍮 🍨 🥧 ' +
-  '🍓 🍋 🥑 🍆 🥦 🌶️ 🧄 🍄 🐟 🦐 🦞 🍗 🥩 🍖 🧀 🥚 🍚 🫕 🫖 🍸 🍹 🍷 🍵 ☕ 🥤 🌱 🎉 ❤️').split(' ');
 
 /** onDone(result) — result: the saved section, 'deleted', or undefined when dismissed. */
 function openSectionSheet(sec, onDone) {
@@ -682,29 +732,22 @@ function openSectionSheet(sec, onDone) {
   const { el, close } = openSheet(`
     <h2>${isNew ? 'New section' : 'Edit section'}</h2>
     <div class="sec-edit">
-      <input id="sec-emoji" class="emoji-in" value="${esc(draft.emoji)}" aria-label="Emoji" autocomplete="off">
+      <span class="ico-prev" id="sec-ico" aria-hidden="true">${secIcon(draft.emoji)}</span>
       <input id="sec-name" class="name-in" value="${esc(draft.name)}" placeholder="e.g. Tacos, Noodles, Mezze" maxlength="30" aria-label="Section name">
     </div>
-    <p class="hint small">Pick an emoji, or tap the box and use your emoji keyboard.</p>
-    <div class="emoji-grid">${EMOJIS.map(e => `<button type="button" data-emoji="${e}" class="${e === draft.emoji ? 'on' : ''}">${e}</button>`).join('')}</div>
+    <p class="hint small">Choose an icon.</p>
+    <div class="ico-grid">${SECTION_CHOICES.map(([k, e]) => `<button type="button" data-emoji="${e}" class="${k === iconName(draft.emoji) ? 'on' : ''}" aria-label="${k}">${ICONS[k]}</button>`).join('')}</div>
     <button class="btn primary wide" data-s="save">${isNew ? 'Add section' : 'Save'}</button>
     ${isNew ? '' : `<button class="btn ghost danger wide" data-s="delete">Delete section</button>
       <p class="hint small center">${used ? `${plural(used, 'recipe')} will stay in your cookbook.` : 'No recipes in this section.'}</p>`}
   `);
-  const emojiIn = $('#sec-emoji', el), nameIn = $('#sec-name', el);
+  const nameIn = $('#sec-name', el);
   if (isNew) setTimeout(() => nameIn.focus(), 250);
-  emojiIn.addEventListener('focus', () => emojiIn.select());
-  emojiIn.addEventListener('input', () => {
-    const v = emojiIn.value.trim();
-    const parts = window.Intl?.Segmenter ? [...new Intl.Segmenter().segment(v)].map(x => x.segment) : Array.from(v);
-    draft.emoji = parts[parts.length - 1] || '';
-    emojiIn.value = draft.emoji;
-  });
   el.addEventListener('click', e => {
     const em = e.target.closest('[data-emoji]');
     if (em) {
-      draft.emoji = em.dataset.emoji; emojiIn.value = draft.emoji;
-      $$('.emoji-grid button', el).forEach(x => x.classList.toggle('on', x === em));
+      draft.emoji = em.dataset.emoji; $('#sec-ico', el).innerHTML = secIcon(draft.emoji);
+      $$('.ico-grid button', el).forEach(x => x.classList.toggle('on', x === em));
       return;
     }
     const a = e.target.closest('[data-s]')?.dataset.s;
@@ -714,7 +757,7 @@ function openSectionSheet(sec, onDone) {
       draft.emoji = draft.emoji || '🍽️';
       S.saveSection(draft);
       close(); onDone?.(draft);
-      toast(isNew ? `${draft.emoji} ${draft.name} added` : 'Section saved');
+      toast(isNew ? `${draft.name} added` : 'Section saved');
     }
     if (a === 'delete') {
       if (!confirm(`Delete “${draft.name}”? ${used ? 'Its recipes stay in your cookbook.' : ''}`)) return;
@@ -750,7 +793,7 @@ function openGrocerySheet(r) {
       if (!on.size) return;
       S.addGrocery([...on].sort((a, b) => a - b).map(i => ({ text: items[i], from: r.title, recipeId: r.id })));
       close(); updateBadge();
-      toast(`🛒 ${plural(on.size, 'item')} added to Groceries`);
+      toast(`${plural(on.size, 'item')} added to Groceries`);
     }
   });
 }
@@ -786,10 +829,10 @@ function openEditor({ id, sectionId, mode } = {}) {
         <button class="pill-btn" data-ed="rm-photo">Remove</button>
       </div>`;
     return `<label class="ph-add"><input type="file" accept="image/*" hidden class="ed-file">
-      <span class="ph-ico">📷</span><b>Add a photo</b><small>Take one or choose from your library</small></label>`;
+      <span class="ph-ico">${ICONS.camera}</span><b>Add a photo</b><small>Take one or choose from your library</small></label>`;
   }
   function secChips() {
-    return S.getSections().map(s => `<button type="button" class="chip ${draft.sectionIds.includes(s.id) ? 'on' : ''}" data-ed="sec" data-id="${esc(s.id)}">${esc(s.emoji)} ${esc(s.name)}</button>`).join('') +
+    return S.getSections().map(s => `<button type="button" class="chip ${draft.sectionIds.includes(s.id) ? 'on' : ''}" data-ed="sec" data-id="${esc(s.id)}">${secIcon(s.emoji)}${esc(s.name)}</button>`).join('') +
       `<button type="button" class="chip add" data-ed="new-sec">+ New</button>`;
   }
 
@@ -802,8 +845,8 @@ function openEditor({ id, sectionId, mode } = {}) {
     </div>
     <div class="ed-body">
       ${existing ? '' : `<div class="seg ed-seg" role="tablist">
-        <button class="seg-b ${pane === 'paste' ? 'on' : ''}" data-ed="pane" data-v="paste" role="tab">✨ Smart paste</button>
-        <button class="seg-b ${pane === 'write' ? 'on' : ''}" data-ed="pane" data-v="write" role="tab">✍️ Write</button>
+        <button class="seg-b ${pane === 'paste' ? 'on' : ''}" data-ed="pane" data-v="paste" role="tab">Smart paste</button>
+        <button class="seg-b ${pane === 'write' ? 'on' : ''}" data-ed="pane" data-v="write" role="tab">Write</button>
       </div>`}
 
       <div class="ed-pane" data-pane="paste" ${pane === 'paste' ? '' : 'hidden'}>
@@ -813,7 +856,7 @@ function openEditor({ id, sectionId, mode } = {}) {
           ${navigator.clipboard?.readText ? '<button class="btn ghost" data-ed="paste-clip">Paste</button>' : ''}
           <button class="btn primary grow" data-ed="sort">Sort it for me</button>
         </div>
-        <p class="hint small">📷 Is the recipe in a photo or screenshot? Open it in Photos, press and hold the text, tap <b>Copy</b>, then paste it here.</p>
+        <p class="hint small">Is the recipe in a photo or screenshot? Open it in Photos, press and hold the text, tap <b>Copy</b>, then paste it here.</p>
       </div>
 
       <div class="ed-pane" data-pane="write" ${pane === 'write' ? '' : 'hidden'}>
@@ -838,9 +881,9 @@ function openEditor({ id, sectionId, mode } = {}) {
         <label class="field"><span>Source</span><input id="ed-source" value="${esc(draft.source)}" placeholder="Website link, book or person" autocapitalize="off"></label>
         <div class="r-flags">
           <button type="button" class="flag ${draft.favorite ? 'on' : ''}" data-ed="fav">${ICON.star} Favorite</button>
-          <button type="button" class="flag ${draft.wantToTry ? 'on' : ''}" data-ed="try">🔖 Want to try</button>
+          <button type="button" class="flag ${draft.wantToTry ? 'on' : ''}" data-ed="try">${ICONS.bookmark} Want to try</button>
         </div>
-        <p class="hint small">🎙️ Tip: tap the microphone on the keyboard to dictate instead of typing.</p>
+        <p class="hint small">Tip: tap the microphone on the keyboard to dictate instead of typing.</p>
         ${existing ? '<button class="btn ghost danger wide" data-ed="delete">Delete recipe</button>' : ''}
       </div>
     </div>`;
@@ -916,7 +959,7 @@ function openEditor({ id, sectionId, mode } = {}) {
     close();
     if (existing) rerender();
     else go('recipe', { id: draft.id });
-    toast(existing ? 'Saved' : 'Added to your cookbook ✨');
+    toast(existing ? 'Saved' : 'Added to your cookbook');
   }
 
   draw();
@@ -1030,7 +1073,7 @@ function openCook(r) {
         ${steps[i].head ? `<div class="cook-head">${esc(steps[i].head)}</div>` : ''}
         <div class="cook-count">Step ${i + 1} <span>of ${n}</span></div>
         <p class="cook-text">${withTimers(steps[i].text, steps[i].label, r.title)}</p>
-        ${i === n - 1 ? '<p class="cook-last">Last step. Enjoy! ✨</p>' : ''}
+        ${i === n - 1 ? '<p class="cook-last">Last step. Enjoy!</p>' : ''}
       </div>
       <p class="cook-awake">${awake ? 'Screen stays on while you cook' : ''}</p>
       <div class="cook-nav">
@@ -1110,7 +1153,7 @@ function startTimer(seconds, label, title) {
   timers.push({ id: S.newId('t'), label, title, seconds, endsAt: Date.now() + seconds * 1000 });
   S.saveTimers(timers);
   drawTimers();
-  toast(`⏱ Timer started: ${formatDuration(seconds)}`);
+  toast(`Timer started: ${formatDuration(seconds)}`);
 }
 function drawTimers() {
   const el = $('#timers');
