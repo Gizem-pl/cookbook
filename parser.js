@@ -74,6 +74,68 @@ export function scaleLine(line, factor) {
   return amount == null ? line : amount + rest;
 }
 
+/* ---------- Same ingredient listed twice (for the grocery list) ---------- */
+// A recipe often names an ingredient twice: "400 g sushi rice" in one part and "Sushi rice" again in another.
+// For shopping that is one item: the line without an amount is dropped in favour of the one with it.
+// Amounts are never added up (the ingredient may be used in two places), they are shown side by side.
+
+const UNIT_LEAD_RE = new RegExp(`^\\s*(${UNITS})\\.?(?![\\p{L}])\\s*`, 'iu');
+const AMOUNT_TAIL_RE = new RegExp(`^(.*?\\S)[\\s:–—,-]*\\(?${NUM}(?:\\s*(?:-|–|—|to)\\s*${NUM})?\\s*(?:${UNITS})\\.?\\)?\\s*$`, 'iu');
+const COUNT_TAIL = /\s+(?:cloves?|cans?|tins?|slices?|sticks?|sprigs?|sheets?|pieces?|bunch(?:es)?|packs?|packets?)(?=\s*(?:[,(;]|$))/i;
+
+// lower case without accents, so "Kırmızı" and "kirmizi" read the same
+const fold = s => s.toLocaleLowerCase('tr').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ı/g, 'i');
+// words that describe size or preparation, not what you buy
+const PREP_WORDS = new Set(fold('a an the of some about approx approximately fresh freshly large small medium big cooked prepared seasoned ripe ' +
+  'chopped finely roughly minced sliced thinly diced grated shredded peeled softened melted beaten ' +
+  'büyük küçük orta boy taze doğranmış ince rendelenmiş haşlanmış pişmiş').split(' '));
+const NAME_TAIL = /\b(?:to taste|for serving|for garnish|to serve|optional|or more|plus (?:more|extra)|isteğe (?:göre|bağlı)|süslemek için)\b.*$/iu;
+
+/** The shopping name of an ingredient: "Sushi Rice, rinsed" → "sushi rice", "large eggs" → "egg". */
+function itemName(s) {
+  s = s.replace(/\([^)]*\)/g, ' ').split(/[,;]|\s[-–—]\s/)[0].replace(NAME_TAIL, '').replace(COUNT_TAIL, '');
+  const words = fold(s).replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean);
+  while (words.length > 1 && PREP_WORDS.has(words[0])) words.shift();
+  if (!words.length) return '';
+  const k = words.length - 1;
+  words[k] = words[k].replace(/ies$/, 'y').replace(/(ch|sh|ss|x|o)es$/, '$1').replace(/([^s])s$/, '$1');
+  return words.join(' ');
+}
+
+/** { key, measured }: the ingredient's shopping name, and whether the line gives an amount. */
+function readItem(line) {
+  const m = line.match(QTY_RE);
+  if (m && !/^\d{4,}$/.test(m[1])) {
+    const rest = line.slice(m[0].length).replace(/\([^)]*\)/g, ' ');   // "1 (400 g) can tomatoes"
+    return { key: itemName(rest.replace(UNIT_LEAD_RE, '').replace(/^\s*of\s+/i, '')), measured: true };
+  }
+  const t = line.match(AMOUNT_TAIL_RE);                                  // "Sushi rice – 400 g", "Mayo (2 tbsp)"
+  if (t) return { key: itemName(t[1]), measured: true };
+  // "a pinch of salt", "a handful of basil": the measure word isn't part of the name
+  return { key: itemName(line.replace(/^\s*(?:a|an|some|bir)\s+/i, '').replace(UNIT_LEAD_RE, '').replace(/^\s*of\s+/i, '')), measured: false };
+}
+
+/**
+ * One grocery line per ingredient:
+ * "Sushi rice" + "400 gr sushi rice" → "400 gr sushi rice";
+ * "2 tbsp sesame seeds" + "1 tbsp sesame seeds" → "2 tbsp sesame seeds + 1 tbsp sesame seeds".
+ * A line with no amount stays when nothing else names that ingredient ("Kewpie mayo"). Headings ("# …") are left out.
+ */
+export function mergeIngredients(lines) {
+  const groups = new Map();
+  for (const line of lines) {
+    if (!line || line.startsWith('#')) continue;
+    const it = { line, ...readItem(line) };
+    const k = it.key || ' ' + groups.size;           // nothing readable: keep it as its own line
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(it);
+  }
+  return [...groups.values()].map(items => {
+    const measured = items.filter(i => i.measured);
+    return measured.length ? measured.map(i => i.line).join(' + ') : items[0].line;
+  });
+}
+
 /* ---------- Timers ---------- */
 // Catches every way a recipe writes a time: "10 minutes", "10-minute", "10–12 min", "1½ hours", "1 1/2 hrs",
 // "an hour and a half", "two minutes", "thirty-five minutes", "30 sec", "10m", "1h30m",

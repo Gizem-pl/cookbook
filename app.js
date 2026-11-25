@@ -2,7 +2,7 @@
 
 import * as S from './store.js';
 import { ICONS, SECTION_CHOICES, iconName, secIcon } from './icons.js';
-import { parseRecipe, fixBulletWords, splitIngredient, scaleLine, findTimers, formatClock, formatDuration, suggestSections } from './parser.js';
+import { parseRecipe, fixBulletWords, splitIngredient, scaleLine, mergeIngredients, findTimers, formatClock, formatDuration, suggestSections } from './parser.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -214,8 +214,8 @@ const VIEWS = {
 
     return `
     <header class="masthead">
-      <div class="ornament" aria-hidden="true"><i></i><span>✦</span><i></i></div>
       <h1 class="wordmark">Cookbook</h1>
+      <div class="ornament" aria-hidden="true"><i></i><span>✦</span><i></i></div>
       <p class="tagline">${recipes.length ? `${plural(recipes.length, 'recipe')} · ${plural(secs.length, 'section')}` : 'Your favourite recipes, beautifully kept'}</p>
     </header>
 
@@ -545,7 +545,7 @@ const darkMQ = matchMedia('(prefers-color-scheme: dark)');
 function applyTheme() {
   const t = S.getSettings().theme, dark = t === 'dark' || (t !== 'light' && darkMQ.matches);
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-  $('meta[name="theme-color"]')?.setAttribute('content', dark ? '#110E10' : '#F7F1E8');
+  $('meta[name="theme-color"]')?.setAttribute('content', dark ? '#131110' : '#F7F2E9');
 }
 darkMQ.addEventListener?.('change', applyTheme);
 
@@ -753,10 +753,14 @@ function openSectionSheet(sec, onDone) {
 
 function openGrocerySheet(r) {
   const f = scaleOf(r.id);
-  const items = r.ingredients.filter(l => !l.startsWith('#')).map(l => scaleLine(l, f));
+  const lines = r.ingredients.filter(l => !l.startsWith('#'));
+  // an ingredient named twice in the recipe ("Sushi rice" and "400 g sushi rice") is one thing to buy
+  const items = mergeIngredients(lines.map(l => scaleLine(l, f)));
+  const combined = lines.length - items.length;
   const { el, close } = openSheet(`
     <h2>Add to groceries</h2>
     <p class="hint">${esc(r.title)}${f !== 1 ? (r.servings ? ` · for ${Math.round(r.servings * f)}` : ` · ×${fmtFactor(f)}`) : ''}. Untick what you already have.</p>
+    ${combined ? `<p class="hint small">Repeated ingredients are combined.</p>` : ''}
     <ul class="pick-list">${items.map((t, i) => `<li class="ing" data-i="${i}"><span class="tick" aria-hidden="true"></span><span>${esc(t)}</span></li>`).join('')}</ul>
     <button class="btn primary wide" data-s="add">Add ${plural(items.length, 'item')}</button>
   `);

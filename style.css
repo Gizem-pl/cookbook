@@ -1,75 +1,79 @@
-/* Cookbook — warm and luxurious. Dark: aubergine-black surfaces, cream text, burgundy accents, a touch of champagne.
-   Light: ivory paper, aubergine ink, deep burgundy accents, antique brass. */
+/* Cookbook — burgundy and ivory.
+   Dark: warm espresso-black surfaces, ivory text and hairlines, antique gold icons; burgundy only for buttons and small accents.
+   Light: ivory paper, deep ink, burgundy accents, antique brass. */
 
 :root {
   color-scheme: dark;
-  --bg: #110E10;
-  --card: #1B1619;
-  --surface: #241D21;
-  --surface-2: #2C2328;
-  --line: #352B30;
-  --ink: #F3ECE3;
-  --sub: #C4B8AE;
-  --muted: #9D918A;
-  --wine: #581728;
-  --wine-2: #722036;
-  --rose: #D48C9B;
-  --wine-soft: rgba(114, 32, 54, .30);
-  --wine-line: rgba(212, 140, 155, .32);
-  --gold: #D9BF8E;
+  --bg: #131110;
+  --card: #1C1917;
+  --surface: #25201C;
+  --surface-2: #2D2723;
+  --line: #352E29;
+  --ink: #F2EADD;
+  --sub: #C3B8A9;
+  --muted: #968B7F;
+  --wine: #5A1828;
+  --wine-2: #752237;
+  --rose: #E6D5B6;
+  --wine-soft: rgba(117, 34, 55, .22);
+  --wine-line: rgba(230, 213, 182, .17);
+  --gold: #D3B887;
+  --berry: #B4526A;
   --danger: #EE9A9A;
-  --on-wine: #FBF3EA;
-  --glow: rgba(88, 23, 40, .34);
-  --rc-a: #3A1A25;
-  --rc-b: #1C1418;
-  --glass: rgba(17, 14, 16, .72);
-  --glass-2: rgba(17, 14, 16, .97);
-  --fade: rgba(17, 14, 16, 0);
-  --tabbar: rgba(20, 16, 18, .86);
-  --timer: rgba(36, 29, 33, .94);
-  --toast: #2E2429;
+  --on-wine: #FBF4EA;
+  --glow: rgba(117, 34, 55, .13);
+  --rc-a: #211D1A;
+  --rc-b: #1A1715;
+  --glass: rgba(19, 17, 16, .72);
+  --glass-2: rgba(19, 17, 16, .97);
+  --fade: rgba(19, 17, 16, 0);
+  --tabbar: rgba(22, 19, 17, .88);
+  --timer: rgba(37, 32, 28, .94);
+  --toast: #2D2723;
   --toast-ink: var(--ink);
   --shadow: rgba(0, 0, 0, .45);
-  --btn-shadow: rgba(88, 23, 40, .35);
+  --btn-shadow: rgba(90, 24, 40, .32);
   --backdrop: rgba(0, 0, 0, .55);
   --seg-on: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 2px 8px rgba(0, 0, 0, .3);
   --radius: 16px;
   --nav-h: 64px;
   --rs: 1;
   --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --display: Didot, "Bodoni 72", "Bodoni MT", "Iowan Old Style", Georgia, serif;
   --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 html[data-theme="light"] {
   color-scheme: light;
-  --bg: #F7F1E8;
-  --card: #FFFCF7;
-  --surface: #F2E9DD;
+  --bg: #F7F2E9;
+  --card: #FFFDF9;
+  --surface: #F1EADF;
   --surface-2: #FFFFFF;
-  --line: #E3D5C4;
-  --ink: #2B1A21;
-  --sub: #6A5753;
-  --muted: #968580;
+  --line: #E5DACB;
+  --ink: #2A1D1F;
+  --sub: #6A5B55;
+  --muted: #978881;
   --wine: #6B1A30;
-  --wine-2: #8A2842;
-  --rose: #8E2C45;
-  --wine-soft: rgba(138, 40, 66, .08);
-  --wine-line: rgba(142, 44, 69, .26);
+  --wine-2: #82243C;
+  --rose: #7E2339;
+  --wine-soft: rgba(130, 36, 60, .07);
+  --wine-line: rgba(154, 118, 53, .26);
   --gold: #9A7635;
+  --berry: #82243C;
   --danger: #B0383C;
-  --glow: rgba(138, 40, 66, .10);
-  --rc-a: #F4E2DE;
-  --rc-b: #EEE4D7;
-  --glass: rgba(255, 252, 247, .82);
-  --glass-2: rgba(247, 241, 232, .98);
-  --fade: rgba(247, 241, 232, 0);
-  --tabbar: rgba(250, 245, 238, .88);
-  --timer: rgba(255, 252, 247, .96);
-  --toast: #2B1A21;
-  --toast-ink: #F7F1E8;
-  --shadow: rgba(74, 40, 46, .14);
-  --btn-shadow: rgba(107, 26, 48, .22);
-  --backdrop: rgba(43, 26, 33, .32);
-  --seg-on: 0 1px 2px rgba(74, 40, 46, .08), 0 2px 8px rgba(74, 40, 46, .07);
+  --glow: rgba(154, 118, 53, .07);
+  --rc-a: #FFFDF9;
+  --rc-b: #F5EEE3;
+  --glass: rgba(255, 253, 249, .82);
+  --glass-2: rgba(247, 242, 233, .98);
+  --fade: rgba(247, 242, 233, 0);
+  --tabbar: rgba(250, 246, 239, .9);
+  --timer: rgba(255, 253, 249, .96);
+  --toast: #2A1D1F;
+  --toast-ink: #F7F2E9;
+  --shadow: rgba(74, 52, 40, .12);
+  --btn-shadow: rgba(107, 26, 48, .2);
+  --backdrop: rgba(42, 29, 31, .32);
+  --seg-on: 0 1px 2px rgba(74, 52, 40, .08), 0 2px 8px rgba(74, 52, 40, .07);
 }
 
 html[data-size="s"] { --rs: .92; }
@@ -144,12 +148,16 @@ b, strong { font-weight: 600; }
 .link.strong { font-weight: 600; }
 
 /* ---------- Masthead ---------- */
-.masthead { text-align: center; padding: 26px 0 22px; }
+.masthead { text-align: center; padding: 30px 0 20px; }
 .ornament { display: flex; align-items: center; justify-content: center; gap: 12px; color: var(--gold); font-size: 12px; }
 .ornament i { width: 44px; height: 1px; background: linear-gradient(90deg, transparent, var(--gold)); }
 .ornament i:last-child { background: linear-gradient(270deg, transparent, var(--gold)); }
-.wordmark { margin-top: 10px; font-size: 40px; letter-spacing: .02em; font-style: italic; color: var(--ink); }
-.tagline { margin: 6px 0 0; font: 600 11px/1.4 var(--sans); letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
+/* a fine high-contrast wordmark, spaced like a label, instead of a big bold title */
+.wordmark { margin: 0; font: 400 25px/1 var(--display); letter-spacing: .34em; padding-left: .34em; text-transform: uppercase; color: var(--ink); }
+.masthead .ornament { margin-top: 14px; }
+.masthead .ornament i { width: 34px; }
+.masthead .ornament span { color: var(--berry); }
+.tagline { margin: 12px 0 0; font: italic 400 15px/1.4 var(--serif); letter-spacing: .01em; color: var(--muted); }
 
 .nudge {
   display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 10px;
@@ -175,28 +183,33 @@ b, strong { font-weight: 600; }
 .row-head { display: flex; align-items: center; gap: 14px; margin: 34px 2px 14px; }
 .row-head.flush { margin: 0 0 6px; }
 .row-head.first { margin-top: 10px; }
-.row-head h2 { flex: 1; display: flex; align-items: center; gap: 14px; font-style: italic; font-size: 23px; }
+.row-head h2 { flex: 1; display: flex; align-items: center; gap: 14px; font-style: italic; font-weight: 400; font-size: 21px; }
 .row-head h2::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--wine-line), transparent); }
 .row-head .link { font-size: 14px; letter-spacing: .02em; }
 
-/* ---------- Section tiles ---------- */
-.sec-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+/* ---------- Section tiles: small framed cards, three to a row ---------- */
+.sec-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .sec-tile {
-  position: relative; aspect-ratio: 5 / 4; border-radius: 18px; overflow: hidden; isolation: isolate; text-align: left;
-  background: radial-gradient(130% 100% at 50% 0%, var(--rc-a), var(--rc-b) 75%); border: 1px solid var(--line);
-  box-shadow: 0 14px 30px -18px var(--shadow); transition: transform .15s ease;
+  position: relative; aspect-ratio: 1; border-radius: 14px; overflow: hidden; isolation: isolate; min-width: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; padding: 10px 6px; text-align: center;
+  background: linear-gradient(180deg, var(--rc-a), var(--rc-b));
+  box-shadow: 0 0 0 1px var(--line), 0 10px 22px -16px var(--shadow); transition: transform .15s ease;
 }
-.sec-tile:active { transform: scale(.97); }
+.sec-tile::before {   /* inner hairline frame, like a printed menu card */
+  content: ""; position: absolute; inset: 4px; border-radius: 10px; border: 1px solid var(--wine-line); pointer-events: none;
+}
+.sec-tile:active { transform: scale(.96); }
 .sec-tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; }
-.sec-tile.photo::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, transparent 35%, rgba(12, 8, 10, .82)); }
-.st-ico { position: absolute; top: 0; left: 0; right: 0; bottom: 44px; display: grid; place-items: center; color: var(--gold); }
-.st-ico::before { content: ""; position: absolute; width: 60px; height: 60px; border-radius: 50%; border: 1px solid var(--wine-line); }
-.st-ico svg { width: 30px; height: 30px; stroke-width: 1.2; }
-.st-cap { position: absolute; left: 14px; right: 14px; bottom: 12px; display: flex; flex-direction: column; gap: 2px; }
-.st-name { font: 500 19px/1.15 var(--serif); }
-.st-n { font: 600 10px/1.3 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
-.sec-tile.photo .st-name { color: #FBF3EA; }
-.sec-tile.photo .st-n { color: rgba(251, 243, 234, .72); }
+.sec-tile.photo { justify-content: flex-end; padding-bottom: 11px; }
+.sec-tile.photo::before { border-color: rgba(251, 244, 234, .28); }
+.sec-tile.photo::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(12, 9, 8, .05) 30%, rgba(12, 9, 8, .78)); }
+.st-ico { display: grid; place-items: center; color: var(--gold); }
+.st-ico svg { width: 26px; height: 26px; stroke-width: 1.25; }
+.st-cap { display: flex; flex-direction: column; align-items: center; gap: 3px; max-width: 100%; }
+.st-name { font: 400 15px/1.15 var(--serif); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 4px; }
+.st-n { font: 500 9px/1.3 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.sec-tile.photo .st-name { color: #FBF4EA; }
+.sec-tile.photo .st-n { color: rgba(251, 244, 234, .75); }
 
 /* ---------- Covers for recipes without a photo: the section's icon in a gold circle ---------- */
 .cover { position: absolute; inset: 0; display: grid; place-items: center; }
@@ -484,7 +497,7 @@ body.cooking #timers { top: calc(env(safe-area-inset-top) + 70px); bottom: auto;
 .t-x svg { width: 16px; height: 16px; }
 .timer.ringing { background: linear-gradient(180deg, var(--wine-2), var(--wine)); border-color: transparent; animation: ring 1s ease-in-out infinite; cursor: pointer; }
 .timer.ringing .t-clock, .timer.ringing .t-label { color: var(--on-wine); }
-@keyframes ring { 50% { box-shadow: 0 0 0 6px rgba(219, 129, 149, .25), 0 8px 26px var(--shadow); } }
+@keyframes ring { 50% { box-shadow: 0 0 0 6px rgba(117, 34, 55, .35), 0 8px 26px var(--shadow); } }
 
 /* ---------- Bottom sheet ---------- */
 .sheet-wrap { position: fixed; inset: 0; z-index: 80; }

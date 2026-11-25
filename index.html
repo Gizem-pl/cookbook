@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Cookbook</title>
   <meta name="description" content="My favourite recipes.">
-  <meta name="theme-color" content="#121013">
+  <meta name="theme-color" content="#131110">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -18,7 +18,7 @@
     try { var t = (JSON.parse(localStorage.getItem('cb.settings.v1')) || {}).theme || 'auto';
       var d = t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
       document.documentElement.dataset.theme = d ? 'dark' : 'light';
-      document.querySelector('meta[name="theme-color"]').setAttribute('content', d ? '#110E10' : '#F7F1E8'); } catch (e) {}</script>
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', d ? '#131110' : '#F7F2E9'); } catch (e) {}</script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
