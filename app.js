@@ -197,56 +197,54 @@ const VIEWS = {
     }
     const fav = recipes.filter(r => r.favorite).length, tryN = recipes.filter(r => r.wantToTry).length;
     const byNew = [...recipes].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-    const recent = byNew.slice(0, 8);
     const st = S.getSettings();
     const nudge = recipes.length >= 5 && Date.now() - (st.lastBackup || 0) > 30 * 864e5;
 
-    // Each section's tile shows a photo from its newest recipe that has one.
+    // Each section shows a small round photo from its newest recipe that has one, otherwise its line icon.
     const coverOf = new Map();
     for (const r of byNew) if (r.hasPhoto) for (const id of r.sectionIds || []) if (!coverOf.has(id)) coverOf.set(id, r);
     const tile = (id, name, emoji, n) => {
       const c = coverOf.get(id);
-      return `<button class="sec-tile ${c ? 'photo' : ''}" data-act="section" data-id="${esc(id)}">
-        ${c ? photoImg(c, true) : `<span class="st-ico">${secIcon(emoji)}</span>`}
-        <span class="st-cap"><span class="st-name">${esc(name)}</span><span class="st-n">${plural(n, 'recipe')}</span></span>
+      return `<button class="sec-tile" data-act="section" data-id="${esc(id)}">
+        <span class="medal ${c ? 'photo' : ''}">${c ? photoImg(c, true) : secIcon(emoji)}</span>
+        <span class="st-name">${esc(name)}</span><span class="st-n">${plural(n, 'recipe')}</span>
       </button>`;
     };
+    const tocRow = (filter, icon, name, n) => `<li><button data-act="list" data-filter="${filter}">
+      <span class="toc-ico ${filter}">${icon}</span><span class="toc-name">${name}</span><span class="toc-dots" aria-hidden="true"></span><span class="toc-n">${n}</span>
+    </button></li>`;
 
     return `
     <header class="masthead">
-      <h1 class="wordmark">Cookbook</h1>
       <div class="ornament" aria-hidden="true"><i></i><span>✦</span><i></i></div>
-      <p class="tagline">${recipes.length ? `${plural(recipes.length, 'recipe')} · ${plural(secs.length, 'section')}` : 'Your favourite recipes, beautifully kept'}</p>
+      <h1 class="wordmark">Cookbook</h1>
+      <p class="tagline">${recipes.length ? `${plural(recipes.length, 'recipe')} in ${plural(secs.length, 'section')}` : 'Your favourite recipes, beautifully kept'}</p>
     </header>
 
     ${nudge ? `<button class="nudge" data-act="go-settings">${ICONS.shield}<span class="nd-t">${st.lastBackup ? 'It’s been a while since your last backup' : 'Save your first backup'}</span><span class="nd-go">›</span></button>` : ''}
 
-    <div class="row-head first"><h2>Sections</h2><button class="link" data-act="new-section">+ New</button></div>
+    <div class="shelf-head"><h2>Sections</h2><button class="link" data-act="new-section">+ New</button></div>
     <div class="sec-grid">
       ${secs.map(s => tile(s.id, s.name, s.emoji, counts.get(s.id) || 0)).join('')}
       ${unsorted ? tile('__none', 'Unsorted', '📎', unsorted) : ''}
     </div>
 
     ${recipes.length ? `
-    <nav class="quick" aria-label="Collections">
-      <button data-act="list" data-filter="fav"><span class="q-ico star">${ICON.star}</span><span class="q-n">${fav}</span><span class="q-label">Favorites</span></button>
-      <button data-act="list" data-filter="try"><span class="q-ico">${ICONS.bookmark}</span><span class="q-n">${tryN}</span><span class="q-label">Want to try</span></button>
-      <button data-act="list" data-filter="all"><span class="q-ico">${ICONS.book}</span><span class="q-n">${recipes.length}</span><span class="q-label">All recipes</span></button>
-    </nav>` : `
+    <div class="shelf-head"><h2>Collections</h2></div>
+    <ul class="toc" aria-label="Collections">
+      ${tocRow('all', ICONS.book, 'All recipes', recipes.length)}
+      ${tocRow('fav', ICON.star, 'Favorites', fav)}
+      ${tocRow('try', ICONS.bookmark, 'Want to try', tryN)}
+    </ul>` : `
     <div class="empty-hero">
       <div class="ornament" aria-hidden="true"><i></i><span>✦</span><i></i></div>
-      <p class="eyebrow">Start here</p>
-      <h2>Add your first recipe</h2>
-      <p class="sub">Paste one from anywhere and it gets sorted into ingredients and steps for you, or write your own.</p>
+      <h2>Begin your cookbook</h2>
+      <p class="sub">Paste a recipe from anywhere and it gets sorted into ingredients and steps for you, or write your own.</p>
       <div class="btn-row">
         <button class="btn primary" data-act="new-recipe" data-mode="paste">${ICONS.sparkle} Smart paste</button>
         <button class="btn ghost" data-act="new-recipe" data-mode="write">${ICONS.pen} Write</button>
       </div>
     </div>`}
-
-    ${recent.length ? `
-    <div class="row-head"><h2>Recently added</h2></div>
-    <div class="strip">${recent.map(r => card(r, map)).join('')}</div>` : ''}
     `;
   },
 
@@ -269,10 +267,11 @@ const VIEWS = {
     const emptyText = { fav: 'Tap ★ on a recipe to keep it here.', try: 'Mark recipes as “Want to try” to collect them here.' }[p.filter] || 'Nothing here yet.';
     return `
     ${topbar(sec ? `<button class="pill-btn" data-act="edit-section" data-id="${esc(sec.id)}">Edit</button>` : '')}
-    <header class="page-head">
+    <header class="page-head chapter">
       <div class="ph-ico ${emoji === '★' ? 'star' : ''}">${emoji === '★' ? ICON.star : emoji === '🔖' ? ICONS.bookmark : emoji === '📖' ? ICONS.book : secIcon(emoji)}</div>
       <h1>${esc(title)}</h1>
       <p class="sub">${plural(items.length, 'recipe')}</p>
+      <div class="ornament" aria-hidden="true"><i></i><span>✦</span><i></i></div>
     </header>
     ${items.length > 1 ? `<div class="seg small" role="radiogroup" aria-label="Sort">
       <button class="seg-b ${listSort === 'new' ? 'on' : ''}" data-act="sort" data-v="new">Newest</button>
@@ -446,7 +445,7 @@ const VIEWS = {
       </ol>
       <p class="hint">From the Home Screen, Cookbook opens full-screen, works offline, and Safari keeps your recipes safe.</p>
     </section>
-    <p class="added">Cookbook · version 2</p>
+    <p class="added">Cookbook · version 3</p>
     `;
   }
 };
@@ -545,7 +544,7 @@ const darkMQ = matchMedia('(prefers-color-scheme: dark)');
 function applyTheme() {
   const t = S.getSettings().theme, dark = t === 'dark' || (t !== 'light' && darkMQ.matches);
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-  $('meta[name="theme-color"]')?.setAttribute('content', dark ? '#131110' : '#F7F2E9');
+  $('meta[name="theme-color"]')?.setAttribute('content', dark ? '#35121C' : '#5E1527');
 }
 darkMQ.addEventListener?.('change', applyTheme);
 
