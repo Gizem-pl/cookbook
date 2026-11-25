@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Cookbook</title>
   <meta name="description" content="My favourite recipes.">
-  <meta name="theme-color" content="#35121C">
+  <meta name="theme-color" content="#110E10">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -18,7 +18,7 @@
     try { var t = (JSON.parse(localStorage.getItem('cb.settings.v1')) || {}).theme || 'auto';
       var d = t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
       document.documentElement.dataset.theme = d ? 'dark' : 'light';
-      document.querySelector('meta[name="theme-color"]').setAttribute('content', d ? '#35121C' : '#5E1527'); } catch (e) {}</script>
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', d ? '#110E10' : '#F7F1E8'); } catch (e) {}</script>
   <link rel="preload" href="fonts/cormorant-garamond-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/cormorant-garamond-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/eb-garamond-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
@@ -57,7 +57,7 @@
   <div id="overlay-root"></div>
   <div id="toast" role="status" aria-live="polite"></div>
 
-  <noscript><p style="padding:24px;font-family:serif;color:#F5E9D6;background:#35121C">Cookbook needs JavaScript to run.</p></noscript>
+  <noscript><p style="padding:24px;font-family:serif;color:#F5E9D6;background:#110E10">Cookbook needs JavaScript to run.</p></noscript>
   <script type="module" src="app.js"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
-/* Cookbook — bound in burgundy, printed on cream.
-   Dark: deep burgundy cloth, cream type, soft gold foil for icons, rules and the main buttons.
-   Light: cream paper with burgundy ink, a burgundy cover band at the top of the home screen, antique gold rules.
+/* Cookbook — aubergine-black with a soft burgundy glow, cream type and soft gold.
+   Dark: near-black surfaces, cream text, gold foil for icons, rules and the main buttons.
+   Light: ivory paper with burgundy ink and antique gold rules.
    Type: Cormorant Garamond for titles, EB Garamond for reading (both SIL Open Font License, see fonts/). */
 
 @font-face { font-family: "Cormorant Garamond"; font-style: normal; font-weight: 500; font-display: swap; src: url(fonts/cormorant-garamond-latin-500-normal.woff2) format("woff2");
@@ -30,11 +30,13 @@
 
 :root {
   color-scheme: dark;
-  --bg: #35121C;
-  --card: #3F1823;
-  --surface: #471D29;
-  --surface-2: #552634;
-  --line: rgba(245, 233, 214, .11);
+  --bg: #110E10;
+  --card: #1B1619;
+  --surface: #241D21;
+  --surface-2: #2C2328;
+  --line: #352B30;
+  --rc-a: #3A1A25;
+  --rc-b: #1C1418;
   --rule: rgba(216, 185, 127, .32);
   --ink: #F5E9D6;
   --title: #F5E9D6;
@@ -51,18 +53,18 @@
   --tick: #D8B97F;
   --tick-ink: #35121C;
   --danger: #F2A9A9;
-  --glow: rgba(150, 52, 78, .34);
-  --strip: #35121C;
-  --glass: rgba(53, 18, 28, .7);
-  --glass-2: rgba(53, 18, 28, .97);
-  --fade: rgba(53, 18, 28, 0);
-  --tabbar: rgba(44, 14, 23, .9);
-  --timer: rgba(71, 29, 41, .95);
+  --glow: rgba(88, 23, 40, .34);
+  --strip: #110E10;
+  --glass: rgba(17, 14, 16, .72);
+  --glass-2: rgba(17, 14, 16, .97);
+  --fade: rgba(17, 14, 16, 0);
+  --tabbar: rgba(20, 16, 18, .86);
+  --timer: rgba(36, 29, 33, .94);
   --toast: #F5E9D6;
   --toast-ink: #35121C;
-  --shadow: rgba(8, 1, 4, .55);
-  --backdrop: rgba(10, 2, 5, .6);
-  --seg-on: 0 1px 0 rgba(255, 255, 255, .05) inset, 0 2px 8px rgba(0, 0, 0, .25);
+  --shadow: rgba(0, 0, 0, .45);
+  --backdrop: rgba(0, 0, 0, .55);
+  --seg-on: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 2px 8px rgba(0, 0, 0, .3);
   --foil: linear-gradient(180deg, #F2DFB2 8%, #D6B275 52%, #B98F4E 92%);
   --radius: 14px;
   --nav-h: 64px;
@@ -73,11 +75,13 @@
 }
 html[data-theme="light"] {
   color-scheme: light;
-  --bg: #F6EEE1;
-  --card: #FCF8F1;
-  --surface: #EFE5D5;
+  --bg: #F7F1E8;
+  --card: #FFFCF7;
+  --surface: #F2E9DD;
   --surface-2: #FFFFFF;
-  --line: rgba(94, 21, 39, .12);
+  --line: #E3D5C4;
+  --rc-a: #F4E2DE;
+  --rc-b: #EEE4D7;
   --rule: rgba(162, 125, 59, .42);
   --ink: #2C1218;
   --title: #5E1527;
@@ -94,18 +98,19 @@ html[data-theme="light"] {
   --tick: #7C1F35;
   --tick-ink: #FAF1E3;
   --danger: #A8323A;
-  --glow: transparent;
-  --strip: #5E1527;
-  --glass: rgba(252, 248, 241, .85);
-  --glass-2: rgba(246, 238, 225, .98);
-  --fade: rgba(246, 238, 225, 0);
-  --tabbar: rgba(249, 243, 233, .92);
-  --timer: rgba(252, 248, 241, .96);
+  --glow: rgba(138, 40, 66, .10);
+  --strip: #F7F1E8;
+  --glass: rgba(255, 252, 247, .82);
+  --glass-2: rgba(247, 241, 232, .98);
+  --fade: rgba(247, 241, 232, 0);
+  --tabbar: rgba(250, 245, 238, .88);
+  --timer: rgba(255, 252, 247, .96);
   --toast: #5E1527;
   --toast-ink: #FAF1E3;
-  --shadow: rgba(80, 40, 30, .16);
-  --backdrop: rgba(44, 18, 24, .35);
-  --seg-on: 0 1px 2px rgba(80, 40, 30, .08), 0 2px 8px rgba(80, 40, 30, .07);
+  --shadow: rgba(74, 40, 46, .14);
+  --backdrop: rgba(43, 26, 33, .32);
+  --seg-on: 0 1px 2px rgba(74, 40, 46, .08), 0 2px 8px rgba(74, 40, 46, .07);
+  --foil: linear-gradient(180deg, #B89452 10%, #8F6A2C 90%);
 }
 
 html[data-size="s"] { --rs: .92; }
@@ -120,11 +125,11 @@ body {
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
 }
-body::before {   /* a little light falling on the cloth at the top */
-  content: ""; position: fixed; inset: 0 0 auto 0; height: 460px; pointer-events: none; z-index: -1;
-  background: radial-gradient(120% 70% at 50% -12%, var(--glow), transparent 70%);
+body::before {   /* soft burgundy glow at the top */
+  content: ""; position: fixed; inset: 0 0 auto 0; height: 420px; pointer-events: none; z-index: -1;
+  background: radial-gradient(120% 70% at 50% -10%, var(--glow), transparent 70%);
 }
-body::after {   /* solid strip under the iPhone status bar (burgundy in light mode too, so the white clock stays readable) */
+body::after {   /* solid strip under the iPhone status bar so scrolling content never shows (or blurs) up there */
   content: ""; position: fixed; inset: 0 0 auto 0; height: env(safe-area-inset-top); z-index: 50; pointer-events: none;
   background: var(--strip);
 }
@@ -156,12 +161,12 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
 #view[class^="anim"] :is(.sec-tile, .rcard):nth-child(5) { animation-delay: .16s; }
 #view[class^="anim"] :is(.sec-tile, .rcard):nth-child(n+6) { animation-delay: .2s; }
 
-/* fine grain over everything, so the burgundy reads as cloth and the cream as paper */
+/* fine paper grain over everything, so the colours feel like velvet and paper instead of flat fills */
 #app::before {
-  content: ""; position: fixed; inset: 0; z-index: 100; pointer-events: none; opacity: .08; mix-blend-mode: overlay;
+  content: ""; position: fixed; inset: 0; z-index: 100; pointer-events: none; opacity: .07; mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
-html[data-theme="light"] #app::before { opacity: .1; mix-blend-mode: multiply; }
+html[data-theme="light"] #app::before { opacity: .09; mix-blend-mode: multiply; }
 
 /* ---------- Type ---------- */
 h1, h2, h3 { font-family: var(--display); font-weight: 600; margin: 0; letter-spacing: 0; }
@@ -183,11 +188,6 @@ b, strong { font-weight: 600; }
 
 /* ---------- Masthead: the cover ---------- */
 .masthead { position: relative; text-align: center; padding: 34px 0 26px; }
-html[data-theme="light"] .masthead {   /* a burgundy cover band, joined to the strip under the status bar */
-  margin: 0 -16px; padding: 30px 16px 30px; background: var(--strip);
-  --gold: #D8B97F; --muted: rgba(245, 233, 214, .72);
-  box-shadow: inset 0 -1px 0 rgba(216, 185, 127, .35);
-}
 .wordmark {
   margin: 16px 0 0; font: 500 37px/1 var(--display); letter-spacing: .2em; padding-left: .2em; text-transform: uppercase;
   color: var(--gold); background: var(--foil); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
@@ -230,14 +230,14 @@ html[data-theme="light"] .masthead {   /* a burgundy cover band, joined to the s
 
 /* ---------- Collections: a contents page with dotted leaders ---------- */
 .toc { list-style: none; margin: 2px 0 0; padding: 0; }
-.toc button { width: 100%; display: flex; align-items: baseline; gap: 12px; padding: 11px 2px; text-align: left; transition: opacity .15s ease; }
+.toc button { width: 100%; display: flex; align-items: baseline; gap: 12px; padding: 13px 2px; text-align: left; transition: opacity .15s ease; }
 .toc button:active { opacity: .6; }
 .toc-ico { flex: none; align-self: center; display: grid; color: var(--gold); }
 .toc-ico svg { width: 18px; height: 18px; stroke-width: 1.4; }
 .toc-ico.fav svg { fill: var(--gold); }
-.toc-name { font: 600 21px/1.2 var(--display); color: var(--ink); }
+.toc-name { font: 600 12px/1.2 var(--sans); letter-spacing: .16em; text-transform: uppercase; color: var(--ink); }
 .toc-dots { flex: 1; height: 2px; opacity: .55; background: radial-gradient(circle, var(--muted) .9px, transparent 1.3px) 0 0 / 7px 2px repeat-x; }
-.toc-n { min-width: 1.4em; text-align: right; font: italic 500 21px/1 var(--display); color: var(--gold); font-variant-numeric: lining-nums; }
+.toc-n { min-width: 1.4em; text-align: right; font: 500 22px/1 "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif; color: var(--ink); font-variant-numeric: lining-nums; }
 
 /* ---------- Covers for recipes without a photo: the section's icon in a gold ring ---------- */
 .cover { position: absolute; inset: 0; display: grid; place-items: center; }
@@ -251,7 +251,7 @@ html[data-theme="light"] .masthead {   /* a burgundy cover band, joined to the s
 .r-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 26px 14px; margin-top: 22px; }
 .rcard { display: flex; flex-direction: column; justify-content: flex-start; align-self: start; text-align: left; min-width: 0; }   /* buttons centre their content: pin it to the top so photos line up */
 .rc-img {
-  position: relative; aspect-ratio: 4 / 5; border-radius: 4px; overflow: hidden; background: var(--card);
+  position: relative; aspect-ratio: 4 / 5; border-radius: 4px; overflow: hidden; background: radial-gradient(120% 90% at 30% 10%, var(--rc-a), var(--rc-b) 70%);
   display: grid; place-items: center; transition: transform .15s ease; box-shadow: 0 16px 30px -20px var(--shadow);
 }
 .rcard:active .rc-img { transform: scale(.97); }
@@ -275,8 +275,8 @@ html[data-theme="light"] .masthead {   /* a burgundy cover band, joined to the s
 .back svg { width: 22px; height: 22px; stroke-width: 2; }
 .topbar.over { background: transparent; margin-bottom: -54px; }
 .topbar.over.solid { background: linear-gradient(var(--bg) 70%, var(--fade)); }
-.topbar.over:not(.solid) .back { padding: 7px 12px 7px 6px; border-radius: 999px; color: #FBF3EA; background: rgba(30, 8, 14, .42); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-.topbar.over:not(.solid) :is(.icon-btn, .pill-btn) { color: #FBF3EA; border-color: rgba(255, 255, 255, .16); background: rgba(30, 8, 14, .42); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.topbar.over:not(.solid) .back { padding: 7px 12px 7px 6px; border-radius: 999px; color: #FBF3EA; background: rgba(17, 14, 16, .42); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.topbar.over:not(.solid) :is(.icon-btn, .pill-btn) { color: #FBF3EA; border-color: rgba(255, 255, 255, .14); background: rgba(17, 14, 16, .42); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 .tb-right { display: flex; align-items: center; gap: 8px; }
 .pill-btn {
   display: inline-flex; align-items: center; gap: 6px; padding: 7px 15px; border-radius: 999px;
@@ -332,7 +332,7 @@ label.btn { position: relative; }
 /* ---------- Recipe ---------- */
 .hero { position: relative; margin: 0 -16px; aspect-ratio: 4 / 4.6; max-height: 72vh; overflow: hidden; background: var(--card); }
 .hero img { width: 100%; height: 100%; object-fit: cover; transform-origin: 50% 100%; will-change: transform; }
-.hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(20, 5, 10, .35), transparent 22%, transparent 50%, var(--bg) 99%); }
+.hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(12, 8, 10, .35), transparent 22%, transparent 50%, var(--bg) 99%); }
 @media (min-width: 560px) { .hero { margin: 0; border-radius: 0 0 20px 20px; } }
 .r-head { position: relative; padding: 30px 6px 4px; text-align: center; }
 .r-head.on-hero { margin-top: -84px; padding-top: 0; }
@@ -434,7 +434,7 @@ p.source { color: var(--sub); }
 .rrows { list-style: none; margin: 0; padding: 0; }
 .rrow { display: flex; align-items: center; gap: 14px; width: 100%; padding: 10px 2px; text-align: left; border-bottom: 1px solid var(--line); }
 .rrow:active { opacity: .7; }
-.rr-img { position: relative; flex: none; width: 56px; height: 56px; border-radius: 4px; overflow: hidden; display: grid; place-items: center; background: var(--card); }
+.rr-img { position: relative; flex: none; width: 56px; height: 56px; border-radius: 4px; overflow: hidden; display: grid; place-items: center; background: radial-gradient(120% 90% at 30% 10%, var(--rc-a), var(--rc-b) 70%); }
 .rr-img img { width: 100%; height: 100%; object-fit: cover; }
 .rr-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .rr-t b { font: 600 20px/1.2 var(--display); }

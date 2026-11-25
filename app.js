@@ -544,7 +544,7 @@ const darkMQ = matchMedia('(prefers-color-scheme: dark)');
 function applyTheme() {
   const t = S.getSettings().theme, dark = t === 'dark' || (t !== 'light' && darkMQ.matches);
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-  $('meta[name="theme-color"]')?.setAttribute('content', dark ? '#35121C' : '#5E1527');
+  $('meta[name="theme-color"]')?.setAttribute('content', dark ? '#110E10' : '#F7F1E8');
 }
 darkMQ.addEventListener?.('change', applyTheme);
 
