@@ -190,35 +190,36 @@ export function findTimers(text) {
     const prev = out[out.length - 1];
     const joined = prev && prev.index + prev.length === m.index;          // "30m" right after "1h"
     if (m.index > 0 && !joined && /[\p{L}\p{N}]/u.test(text[m.index - 1])) { TIME_RE.lastIndex = m.index + 1; continue; }
-    let seconds, length = m[0].length;
+    let seconds, length = m[0].length, unit = 0;
     if (m[5]) {
       seconds = /^half/i.test(m[5]) ? 1800 : 900;
     } else {
-      const unit = m[4], glue = m[3];
+      const word = m[4], glue = m[3];
       const isWord = !/^[\d½¼¾⅓⅔]/.test(m[1]);
       // single-letter units only when glued to a digit: "10m", "1h", "30s"
-      if (/^[mhs]$/i.test(unit) && (glue.length || isWord)) continue;
+      if (/^[mhs]$/i.test(word) && (glue.length || isWord)) continue;
       // "a second egg", "a minute amount" are not times
-      if (/^(a|an|one|few|a few)$/i.test(m[1].trim()) && /^(s|sec|secs|second|seconds)$/i.test(unit)) continue;
+      if (/^(a|an|one|few|a few)$/i.test(m[1].trim()) && /^(s|sec|secs|second|seconds)$/i.test(word)) continue;
       // a full stop after a whole word ("two minutes.") ends the sentence; keep it only for "min." / "hr."
-      if (m[0].endsWith('.') && !/^(?:mins?|hrs?|secs?|dk|sn)$/i.test(unit)) length -= 1;
+      if (m[0].endsWith('.') && !/^(?:mins?|hrs?|secs?|dk|sn)$/i.test(word)) length -= 1;
       const n = timeNum(m[1]);
       if (!isFinite(n) || n <= 0) continue;
-      seconds = Math.round(n * unitSeconds(unit));
+      unit = unitSeconds(word);
+      seconds = Math.round(n * unit);
       // "an hour and a half", "2 minutes and a half"
       const tail = text.slice(m.index + length).match(/^\s+and a half(?![\p{L}])/iu);
-      if (tail) { seconds += Math.round(unitSeconds(unit) / 2); length += tail[0].length; }
+      if (tail) { seconds += Math.round(unit / 2); length += tail[0].length; }
     }
     if (!seconds || seconds > 48 * 3600) continue;
-    out.push({ index: m.index, length, seconds, text: text.slice(m.index, m.index + length) });
+    out.push({ index: m.index, length, seconds, unit, text: text.slice(m.index, m.index + length) });
     TIME_RE.lastIndex = m.index + length;
   }
-  // merge "1 hour 30 minutes", "1h30m", "1 saat 15 dakika" into one timer
+  // merge "1 hour 30 minutes", "1h30m", "1 saat 15 dakika", "2 min 30 sec" into one timer
   for (let i = out.length - 2; i >= 0; i--) {
     const a = out[i], b = out[i + 1];
     const between = text.slice(a.index + a.length, b.index);
-    if (/^\s*(?:and|ve|,)?\s*$/i.test(between) && a.seconds >= 3600 && b.seconds < 3600) {
-      out.splice(i, 2, { index: a.index, length: b.index + b.length - a.index, seconds: a.seconds + b.seconds, text: text.slice(a.index, b.index + b.length) });
+    if (/^\s*(?:and|ve|,)?\s*$/i.test(between) && a.unit > b.unit && a.seconds >= a.unit && b.seconds < a.unit) {
+      out.splice(i, 2, { index: a.index, length: b.index + b.length - a.index, seconds: a.seconds + b.seconds, unit: a.unit, text: text.slice(a.index, b.index + b.length) });
     }
   }
   return out;
@@ -231,11 +232,10 @@ export function formatClock(sec) {
   return h ? `${h}:${p(m)}:${p(s)}` : `${m}:${p(s)}`;
 }
 export function formatDuration(sec) {
-  const h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60);
-  if (h && m) return `${h} h ${m} min`;
-  if (h) return `${h} h`;
+  sec = Math.max(0, Math.round(sec));
   if (sec < 60) return `${sec} sec`;
-  return `${m} min`;
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+  return [h && `${h} h`, m && `${m} min`, s && `${s} sec`].filter(Boolean).join(' ');
 }
 
 /* ---------- Smart paste ---------- */

@@ -64,6 +64,7 @@ function switchTab(tab) {
 }
 /** anim: 'fwd' | 'back' | 'fade' when moving between screens; nothing when redrawing the same screen. */
 function render(anim) {
+  flushNotes();
   const cur = top();
   viewEl.className = '';
   viewEl.innerHTML = VIEWS[cur.view](cur.params);
@@ -623,18 +624,28 @@ document.addEventListener('submit', e => {
   $('#g-input')?.focus();
 });
 
+/* Notes typed on the recipe page save a moment after typing stops. On iPhone the box keeps focus when a button
+   is tapped, so they are also saved before the page is redrawn or the editor opens; otherwise the redraw would
+   show the old notes and the editor would save over the new ones. */
 let notesTimer;
+function flushNotes(t = $('.notes-inline', viewEl)) {
+  clearTimeout(notesTimer);
+  if (!t?.dataset.dirty) return;
+  delete t.dataset.dirty;
+  S.patchRecipe(t.dataset.id, { notes: t.value.trim() });
+}
 document.addEventListener('input', e => {
   const t = e.target;
   if (t.matches('textarea.auto')) autoGrow(t);
   if (e.inputType === 'insertFromPaste' && t.matches('.notes-inline') && /\bbullet\s/i.test(t.value)) { t.value = fixBulletWords(t.value); autoGrow(t); }
   if (t.matches('.notes-inline')) {
+    t.dataset.dirty = '1';
     clearTimeout(notesTimer);
-    notesTimer = setTimeout(() => S.patchRecipe(t.dataset.id, { notes: t.value.trim() }), 400);
+    notesTimer = setTimeout(() => flushNotes(t), 400);
   }
 });
 document.addEventListener('focusout', e => {
-  if (e.target.matches?.('.notes-inline')) { clearTimeout(notesTimer); S.patchRecipe(e.target.dataset.id, { notes: e.target.value.trim() }); }
+  if (e.target.matches?.('.notes-inline')) flushNotes(e.target);
 });
 
 document.addEventListener('change', async e => {
@@ -787,6 +798,7 @@ function openGrocerySheet(r) {
 /* ---------- Editor (smart paste + write) ---------- */
 
 function openEditor({ id, sectionId, mode } = {}) {
+  flushNotes();
   const existing = id ? S.getRecipe(id) : null;
   const draft = existing ? JSON.parse(JSON.stringify(existing)) : {
     id: S.newId(), title: '', sectionIds: sectionId && sectionId !== '__none' ? [sectionId] : [], servings: null,
@@ -794,7 +806,7 @@ function openEditor({ id, sectionId, mode } = {}) {
   };
   const photo = { state: existing?.hasPhoto ? 'keep' : 'none', blobs: null, url: '' };
   let pane = existing ? 'write' : (mode || 'paste');
-  let busy = false;
+  let busy = false, addedSection = false;
 
   const el = document.createElement('div');
   el.className = 'editor overlay-own';
@@ -916,7 +928,7 @@ function openEditor({ id, sectionId, mode } = {}) {
     for (const k of ['prepTime', 'cookTime', 'totalTime']) if (p[k]) draft[k] = p[k];
     if (p.ingredients.length) draft.ingredients = p.ingredients;
     if (p.steps.length) draft.steps = p.steps;
-    if (p.notes) draft.notes = draft.notes ? draft.notes + '\n' + p.notes : p.notes;
+    if (p.notes && !draft.notes.includes(p.notes)) draft.notes = draft.notes ? draft.notes + '\n' + p.notes : p.notes;
     if (p.source && !draft.source) draft.source = p.source;
     for (const sid of suggestSections(draft.title, p.hints, S.getSections())) if (!draft.sectionIds.includes(sid)) draft.sectionIds.push(sid);
     const pasted = text;
@@ -941,6 +953,9 @@ function openEditor({ id, sectionId, mode } = {}) {
       else if (photo.state === 'none' && draft.hasPhoto) { await S.deletePhotos(draft.id); draft.hasPhoto = false; }
     } catch { toast('The photo could not be saved'); draft.hasPhoto = photo.state === 'keep'; }
     if (!S.saveRecipe(draft)) { busy = false; toast('Storage is full. The recipe was not saved.'); return; }
+    // ticked ingredients are remembered by line number, and the scale relative to the servings: both go stale on edit
+    if (existing && existing.ingredients.join('\n') !== draft.ingredients.join('\n')) checks.delete(draft.id);
+    if (existing && existing.servings !== draft.servings) scales.delete(draft.id);
     S.requestPersistence();
     close();
     if (existing) rerender();
@@ -961,6 +976,7 @@ function openEditor({ id, sectionId, mode } = {}) {
       const dirty = snapshot() !== initial || ($('#ed-paste', el)?.value.trim() && !existing);
       if (dirty && !confirm('Discard this recipe?')) return;
       close();
+      if (addedSection) rerender();   // the screen underneath should show the new section
     }
     if (a === 'save') save();
     if (a === 'pane') setPane(b.dataset.v);
@@ -975,7 +991,7 @@ function openEditor({ id, sectionId, mode } = {}) {
       b.classList.toggle('on', i < 0);
     }
     if (a === 'new-sec') openSectionSheet(null, sec => {
-      if (sec && sec.id) { draft.sectionIds.push(sec.id); $('#ed-secs', el).innerHTML = secChips(); }
+      if (sec && sec.id) { addedSection = true; draft.sectionIds.push(sec.id); $('#ed-secs', el).innerHTML = secChips(); }
     });
     if (a === 'fav' || a === 'try') {
       const k = a === 'fav' ? 'favorite' : 'wantToTry';
@@ -1027,7 +1043,14 @@ function openEditor({ id, sectionId, mode } = {}) {
 let wakeLock = null;
 async function keepAwake(on) {
   try {
-    if (on && 'wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); return true; }
+    if (on && 'wakeLock' in navigator) {
+      const lock = await navigator.wakeLock.request('screen');
+      // cooking mode may have been closed while the request was pending
+      if (!document.body.classList.contains('cooking')) { lock.release(); return false; }
+      wakeLock?.release();
+      wakeLock = lock;
+      return true;
+    }
     if (!on && wakeLock) { await wakeLock.release(); wakeLock = null; }
   } catch {}
   return false;
