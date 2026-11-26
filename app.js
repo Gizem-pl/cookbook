@@ -480,6 +480,7 @@ const AFTER = {
     if (!searchQ) setTimeout(() => q.focus(), 60);
   },
   async settings() {
+    readyBackup = null;   // a backup prepared earlier may be out of date by now
     const el = $('#storage-info');
     const recipes = S.getRecipes();
     const photos = recipes.filter(r => r.hasPhoto).length;
@@ -663,26 +664,50 @@ document.addEventListener('change', async e => {
   } catch (err) { if ($('#backup-status')) $('#backup-status').textContent = err.message || 'Restore failed.'; }
 });
 
-async function deliverFile(blob, filename) {
+/** Opens the share sheet (Save to Files) for a file, or downloads it where sharing files isn't possible.
+    downloadIfRefused: download instead when the browser refuses to open the share sheet. */
+async function deliverFile(blob, filename, downloadIfRefused = false) {
   const file = new File([blob], filename, { type: blob.type });
-  if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: filename }); return; }
+  if (navigator.canShare?.({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: filename }); return; }
+    catch (err) { if (!(downloadIfRefused && err?.name === 'NotAllowedError')) throw err; }
+  }
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = filename;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 
+/* Safari opens the share sheet only within a few seconds of a tap. A big cookbook can take longer than that to
+   gather its photos, so when the sheet is refused the finished backup is kept and the button turns into
+   "Save backup file": the next tap opens the sheet straight away. Redrawing Settings drops it (see AFTER.settings). */
+let readyBackup = null, backingUp = false;
+
 async function doBackup() {
-  const st = $('#backup-status');
-  if (st) st.textContent = 'Preparing backup…';
+  if (backingUp) return;
+  backingUp = true;
+  const status = t => { const el = $('#backup-status'); if (el) el.textContent = t; };
+  const button = t => { const el = $('[data-act="backup"]'); if (el) el.textContent = t; };
+  let backup = readyBackup;
+  const second = !!backup;
+  readyBackup = null;
   try {
-    const { blob, filename, count } = await S.createBackup();
-    await deliverFile(blob, filename);
+    if (!backup) { status('Preparing backup…'); backup = await S.createBackup(); }
+    await deliverFile(backup.blob, backup.filename, second);
     S.saveSettings({ lastBackup: Date.now() });
-    if ($('#backup-status')) $('#backup-status').textContent = `Last backup: ${fmtDate(Date.now())} · ${plural(count, 'recipe')}, ${(blob.size / 1048576).toFixed(1)} MB`;
+    button('Save backup');
+    status(`Last backup: ${fmtDate(Date.now())} · ${plural(backup.count, 'recipe')}, ${(backup.blob.size / 1048576).toFixed(1)} MB`);
   } catch (err) {
-    if (err?.name === 'AbortError') { if (st) st.textContent = 'Backup cancelled.'; return; }
-    if (st) st.textContent = 'Could not create the backup.';
+    if (err?.name === 'NotAllowedError' && backup && !second) {
+      readyBackup = backup;
+      button('Save backup file');
+      status('Your backup is ready. Tap “Save backup file” to save it.');
+    } else {
+      button('Save backup');
+      status(err?.name === 'AbortError' ? 'Backup cancelled.' : 'Could not save the backup.');
+    }
+  } finally {
+    backingUp = false;
   }
 }
 
